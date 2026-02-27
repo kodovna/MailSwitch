@@ -1,0 +1,11 @@
+services:
+  mailswitch:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - mailswitch-data:/data
+    restart: unless-stopped
+
+volumes:
+  mailswitch-data:
