@@ -88,9 +88,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Apply auth-test rate limiter before auth middleware
-app.use('/api/jobs/test-auth', authTestLimiter);
-app.use('/api/jobs/test-connection', authTestLimiter);
+// test-auth and test-connection are behind requireAuth already, no rate limiter needed
 
 // Protected API routes
 app.use('/api/upload', requireAuth, uploadRouter);

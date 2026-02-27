@@ -10,6 +10,7 @@ class MigrationEngine {
     this.queues = new Map();        // jobId -> AsyncQueue
     this.migrators = new Map();     // accountId -> AccountMigrator
     this.syncTimers = new Map();    // jobId -> timer
+    this.nextSyncAt = new Map();    // jobId -> ISO timestamp
   }
 
   async startJob(jobId) {
@@ -66,8 +67,8 @@ class MigrationEngine {
 
     this.queues.delete(jobId);
 
-    // Start continuous sync if mode is continuous
-    if (job.mode === 'continuous' && updatedJob.status !== 'cancelled') {
+    // Start continuous sync after initial migration (not if already syncing)
+    if (job.mode === 'continuous' && !this.isSyncing(jobId) && updatedJob.status !== 'cancelled') {
       this.startContinuousSync(jobId);
     }
   }
@@ -185,28 +186,58 @@ class MigrationEngine {
 
     this.stopContinuousSync(jobId);
 
-    const timer = setInterval(() => {
-      logger.info(`Running delta sync for job ${jobId}`);
-      // Reset all completed accounts back to pending for delta sync
-      const accounts = accountQueries.getByJobId(jobId);
-      for (const account of accounts) {
-        if (account.status === 'completed') {
-          accountQueries.updateStatus(account.id, 'pending');
-        }
-      }
-      jobQueries.updateStatus(jobId, 'pending');
-      this.startJob(jobId);
-    }, interval);
+    const scheduleNext = () => {
+      const nextAt = new Date(Date.now() + interval).toISOString();
+      this.nextSyncAt.set(jobId, nextAt);
+      eventBus.emitJobUpdate(jobId, { nextSyncAt: nextAt });
 
-    this.syncTimers.set(jobId, timer);
+      const timer = setTimeout(async () => {
+        try {
+          const currentJob = jobQueries.getById(jobId);
+          if (!currentJob || currentJob.status === 'cancelled') {
+            this.syncTimers.delete(jobId);
+            this.nextSyncAt.delete(jobId);
+            return;
+          }
+
+          this.nextSyncAt.delete(jobId);
+          eventBus.emitJobUpdate(jobId, { nextSyncAt: null });
+
+          logger.info(`Running delta sync for job ${jobId}`);
+
+          // Reset all completed accounts back to pending for delta sync
+          const accounts = accountQueries.getByJobId(jobId);
+          for (const account of accounts) {
+            if (account.status === 'completed') {
+              accountQueries.updateStatus(account.id, 'pending');
+            }
+          }
+          jobQueries.updateStatus(jobId, 'pending');
+
+          await this.startJob(jobId);
+        } catch (err) {
+          logger.error(`Delta sync failed for job ${jobId}`, { error: err.message });
+        }
+
+        // Always reschedule unless cancelled/stopped
+        if (this.syncTimers.has(jobId)) {
+          scheduleNext();
+        }
+      }, interval);
+
+      this.syncTimers.set(jobId, timer);
+    };
+
+    scheduleNext();
     logger.info(`Continuous sync enabled for job ${jobId}, interval: ${interval / 1000}s`);
   }
 
   stopContinuousSync(jobId) {
     const timer = this.syncTimers.get(jobId);
     if (timer) {
-      clearInterval(timer);
+      clearTimeout(timer);
       this.syncTimers.delete(jobId);
+      this.nextSyncAt.delete(jobId);
       logger.info(`Continuous sync disabled for job ${jobId}`);
     }
   }

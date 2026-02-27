@@ -72,6 +72,9 @@ export class ImapClient {
       tls: tlsOptions(),
     });
 
+    // Prevent unhandled 'error' events from crashing the process
+    client.on('error', () => {});
+
     try {
       await Promise.race([
         client.connect(),
@@ -97,6 +100,11 @@ export class ImapClient {
       logger: false,
       emitLogs: false,
       tls: tlsOptions(),
+    });
+
+    // Prevent unhandled 'error' events from crashing the process
+    this.client.on('error', (err) => {
+      logger.debug(`IMAP error for ${this.label}: ${err.message}`);
     });
   }
 
@@ -151,8 +159,8 @@ export class ImapClient {
     const mailbox = await this.client.mailboxOpen(path);
     return {
       path: mailbox.path,
-      uidValidity: mailbox.uidValidity,
-      uidNext: mailbox.uidNext,
+      uidValidity: Number(mailbox.uidValidity),
+      uidNext: Number(mailbox.uidNext),
       exists: mailbox.exists,
     };
   }
@@ -167,7 +175,7 @@ export class ImapClient {
       ...options,
     })) {
       messages.push({
-        uid: msg.uid,
+        uid: Number(msg.uid),
         flags: msg.flags ? [...msg.flags] : [],
         internalDate: msg.internalDate,
         source: msg.source,
@@ -181,6 +189,11 @@ export class ImapClient {
   }
 
   async getStatus(path) {
-    return this.client.status(path, { messages: true, uidNext: true, uidValidity: true });
+    const status = await this.client.status(path, { messages: true, uidNext: true, uidValidity: true });
+    return {
+      ...status,
+      uidValidity: status.uidValidity != null ? Number(status.uidValidity) : null,
+      uidNext: status.uidNext != null ? Number(status.uidNext) : null,
+    };
   }
 }

@@ -59,7 +59,7 @@ export const api = {
     });
   },
 
-  createJob(accounts, mode = 'full', syncInterval = 300, serverConfig = {}) {
+  createJob(accounts, mode = 'full', syncInterval = 60, serverConfig = {}) {
     return request('/jobs', {
       method: 'POST',
       body: JSON.stringify({ accounts, mode, syncInterval, serverConfig }),

@@ -126,7 +126,7 @@ export default function UploadPage() {
     setStarting(true);
     setError(null);
     try {
-      const job = await api.createJob(accounts, mode, 300, serverConfig);
+      const job = await api.createJob(accounts, mode, 60, serverConfig);
       await api.startJob(job.id);
       navigate(`/jobs/${job.id}`);
     } catch (err) {

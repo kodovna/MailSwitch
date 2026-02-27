@@ -4,6 +4,7 @@ import { useMigrationState } from '../hooks/useMigrationState';
 import OverallProgress from '../components/OverallProgress';
 import AccountTable from '../components/AccountTable';
 import SyncToggle from '../components/SyncToggle';
+import SyncCountdown from '../components/SyncCountdown';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../lib/api';
 
@@ -65,6 +66,7 @@ export default function DashboardPage() {
                 onToggle={() => runAction(() => api.toggleSync(job.id))}
                 disabled={actionLoading}
               />
+              {job.syncing && <SyncCountdown nextSyncAt={job.nextSyncAt} />}
             </div>
           )}
 

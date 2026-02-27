@@ -33,7 +33,7 @@ router.post('/test-auth', async (req, res) => {
 
 // Create a new migration job
 router.post('/', (req, res) => {
-  const { accounts, mode = 'full', syncInterval = 300, serverConfig = {} } = req.body;
+  const { accounts, mode = 'full', syncInterval = 60, serverConfig = {} } = req.body;
 
   if (!accounts || !Array.isArray(accounts) || accounts.length === 0) {
     return res.status(400).json({ error: 'No accounts provided' });
@@ -87,7 +87,7 @@ router.get('/:id', (req, res) => {
   const accounts = accountQueries.getByJobId(job.id).map(
     ({ src_password, dst_password, ...rest }) => rest
   );
-  res.json({ ...job, accounts, syncing: migrationEngine.isSyncing(job.id) });
+  res.json({ ...job, accounts, syncing: migrationEngine.isSyncing(job.id), nextSyncAt: migrationEngine.nextSyncAt.get(job.id) || null });
 });
 
 // Start or resume a job

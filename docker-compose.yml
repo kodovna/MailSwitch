@@ -9,7 +9,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - JWT_SECRET=${JWT_SECRET:-}
-      - ALLOW_SELF_SIGNED_CERTS=${ALLOW_SELF_SIGNED_CERTS:-false}
+      - ALLOW_SELF_SIGNED_CERTS=${ALLOW_SELF_SIGNED_CERTS:-true}
     restart: unless-stopped
 
 volumes:

@@ -37,6 +37,9 @@ export default function Layout({ children }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+      <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
+        MailSwitch v1.0.0
+      </footer>
     </div>
   );
 }
