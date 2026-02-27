@@ -11,6 +11,7 @@ import { initDatabase, getDb } from './db/database.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requireAuth, requireAuthSSE } from './middleware/auth.js';
 import { migrationEngine } from './services/migration-engine.js';
+import { eventBus } from './services/event-bus.js';
 import { logger } from './utils/logger.js';
 import authRouter from './routes/auth.js';
 import setupRouter from './routes/setup.js';
@@ -64,7 +65,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 
 // Body parser with reduced limit
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
 
 // Global rate limiter
 app.use(rateLimit({
@@ -116,6 +117,7 @@ const server = app.listen(config.port, () => {
 // Graceful shutdown
 function shutdown(signal) {
   logger.info(`${signal} received, shutting down gracefully`);
+  eventBus.shutdown();
   migrationEngine.shutdown();
   server.close(() => {
     logger.info('Server closed');

@@ -57,6 +57,7 @@ export default function UploadPage() {
   }
 
   async function runVerification(accts) {
+    const BATCH_SIZE = 10;
     setVerifying(true);
     setVerified(false);
     setError(null);
@@ -68,33 +69,39 @@ export default function UploadPage() {
     setAuthResults([...initial]);
 
     const results = [...initial];
-    const promises = accts.map(async (acct, i) => {
-      const srcResult = await api.testAuth(
-        serverConfig.srcHost, serverConfig.srcPort, serverConfig.srcSecurity,
-        acct.src_email, acct.src_password
-      ).catch((err) => ({ success: false, error: err.message }));
 
-      results[i] = {
-        ...results[i],
-        src: srcResult.success ? 'success' : 'error',
-        srcError: srcResult.error || '',
-      };
-      setAuthResults([...results]);
+    // Process accounts in batches of BATCH_SIZE to avoid request floods
+    for (let start = 0; start < accts.length; start += BATCH_SIZE) {
+      const batch = accts.slice(start, start + BATCH_SIZE);
+      const promises = batch.map(async (acct, batchIdx) => {
+        const i = start + batchIdx;
+        const srcResult = await api.testAuth(
+          serverConfig.srcHost, serverConfig.srcPort, serverConfig.srcSecurity,
+          acct.src_email, acct.src_password
+        ).catch((err) => ({ success: false, error: err.message }));
 
-      const dstResult = await api.testAuth(
-        serverConfig.dstHost, serverConfig.dstPort, serverConfig.dstSecurity,
-        acct.dst_email, acct.dst_password
-      ).catch((err) => ({ success: false, error: err.message }));
+        results[i] = {
+          ...results[i],
+          src: srcResult.success ? 'success' : 'error',
+          srcError: srcResult.error || '',
+        };
+        setAuthResults([...results]);
 
-      results[i] = {
-        ...results[i],
-        dst: dstResult.success ? 'success' : 'error',
-        dstError: dstResult.error || '',
-      };
-      setAuthResults([...results]);
-    });
+        const dstResult = await api.testAuth(
+          serverConfig.dstHost, serverConfig.dstPort, serverConfig.dstSecurity,
+          acct.dst_email, acct.dst_password
+        ).catch((err) => ({ success: false, error: err.message }));
 
-    await Promise.all(promises);
+        results[i] = {
+          ...results[i],
+          dst: dstResult.success ? 'success' : 'error',
+          dstError: dstResult.error || '',
+        };
+        setAuthResults([...results]);
+      });
+
+      await Promise.all(promises);
+    }
 
     const allPassed = results.every((r) => r.src === 'success' && r.dst === 'success');
     setVerified(allPassed);

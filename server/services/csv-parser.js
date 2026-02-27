@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import { validateCsvRow, sanitizeRow } from '../utils/validators.js';
 
 const REQUIRED_HEADERS = ['src_email', 'src_password', 'dst_email', 'dst_password'];
-const MAX_ACCOUNTS = 50;
+const MAX_ACCOUNTS = 500;
 
 export function parseCsvFile(filePath) {
   const content = readFileSync(filePath, 'utf-8');

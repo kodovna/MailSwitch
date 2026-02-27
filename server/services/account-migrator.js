@@ -14,6 +14,7 @@ export class AccountMigrator {
     this.paused = false;
     this.srcClient = null;
     this.dstClient = null;
+    this.migratedCount = account.migrated_messages || 0;
   }
 
   cancel() {
@@ -109,9 +110,9 @@ export class AccountMigrator {
         accountQueries.updateStatus(account.id, 'cancelled');
         eventBus.emitAccountUpdate(jobId, account.id, { status: 'cancelled' });
       } else {
-        const updated = accountQueries.getById(account.id);
-        if (updated.failed_messages > 0) {
-          accountQueries.updateStatus(account.id, 'completed', `Completed with ${updated.failed_messages} failed messages`);
+        const failedMessages = accountQueries.getFailedCount(account.id);
+        if (failedMessages > 0) {
+          accountQueries.updateStatus(account.id, 'completed', `Completed with ${failedMessages} failed messages`);
         } else {
           accountQueries.updateStatus(account.id, 'completed');
         }
@@ -196,9 +197,10 @@ export class AccountMigrator {
           folderQueries.incrementMigrated(account.id, folderPath);
           folderQueries.updateLastUid(account.id, folderPath, msg.uid);
           accountQueries.incrementMigrated(account.id);
+          this.migratedCount++;
 
           eventBus.emitAccountUpdate(jobId, account.id, {
-            migratedMessages: accountQueries.getById(account.id).migrated_messages,
+            migratedMessages: this.migratedCount,
           });
         } catch (err) {
           logger.warn(`Failed to migrate message UID ${msg.uid} in ${folderPath}`, {

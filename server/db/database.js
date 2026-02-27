@@ -162,6 +162,11 @@ export const accountQueries = {
     ).run(id);
   },
 
+  getFailedCount(id) {
+    const row = getDb().prepare('SELECT failed_messages FROM accounts WHERE id = ?').get(id);
+    return row?.failed_messages || 0;
+  },
+
   incrementSkipped(id) {
     getDb().prepare(
       "UPDATE accounts SET skipped_messages = skipped_messages + 1, updated_at = datetime('now') WHERE id = ?"

@@ -39,8 +39,8 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'No accounts provided' });
   }
 
-  if (accounts.length > 50) {
-    return res.status(400).json({ error: 'Maximum 50 accounts allowed' });
+  if (accounts.length > 500) {
+    return res.status(400).json({ error: 'Maximum 500 accounts allowed' });
   }
 
   // Validate mode

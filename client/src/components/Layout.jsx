@@ -38,7 +38,7 @@ export default function Layout({ children }) {
         {children}
       </main>
       <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
-        MailSwitch v1.0.0
+        MailSwitch v1.0.1
       </footer>
     </div>
   );
