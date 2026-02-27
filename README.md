@@ -1,93 +1,204 @@
 # MailSwitch
 
+Self-hosted bulk email migration tool that transfers up to 50 email accounts between IMAP servers. Single `docker-compose up` command to run, with a web UI for uploading account mappings and monitoring real-time migration progress.
 
+## Features
 
-## Getting started
+- Migrate up to 50 IMAP accounts in parallel (5 concurrent by default)
+- Full migration, delta sync (incremental), and continuous sync modes
+- Real-time progress tracking via Server-Sent Events
+- Per-account and per-folder progress with error logging
+- Pause, resume, cancel, and retry controls
+- CSV-based account mapping with drag-and-drop upload
+- SSL/TLS (port 993) and STARTTLS (port 143) support
+- SQLite database with Docker volume persistence
+- Automatic retry with exponential backoff on connection/message errors
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Quick Start
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+```bash
+git clone git@github.com:syafi-dev/MailSwitch.git
+cd mailswitch
+docker-compose up -d
 ```
-cd existing_repo
-git remote add origin https://github.com/syafi-dev/MailSwitch.git
-git branch -M main
-git push -uf origin main
-```
 
-## Integrate with your tools
-
-* [Set up project integrations](https://github.com/syafi-dev/MailSwitch)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Open **http://localhost:3000** in your browser.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### 1. Prepare a CSV file
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Create a CSV file with your account mappings:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```csv
+src_email,src_password,src_host,src_port,dst_email,dst_password,dst_host,dst_port
+user1@old.com,pass1,imap.old.com,993,user1@new.com,newpass1,imap.new.com,993
+user2@old.com,pass2,imap.old.com,,user2@new.com,newpass2,imap.new.com,
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+| Column | Required | Description |
+|--------|----------|-------------|
+| `src_email` | Yes | Source email address |
+| `src_password` | Yes | Source email password |
+| `src_host` | Yes | Source IMAP server hostname |
+| `src_port` | No | Source IMAP port (default: 993) |
+| `dst_email` | Yes | Destination email address |
+| `dst_password` | Yes | Destination email password |
+| `dst_host` | Yes | Destination IMAP server hostname |
+| `dst_port` | No | Destination IMAP port (default: 993) |
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### 2. Upload and start migration
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+1. Open **http://localhost:3000**
+2. Drag and drop your CSV file (or click to browse)
+3. Review the parsed account list
+4. Select migration mode:
+   - **One-time Migration** — migrates all emails once
+   - **Continuous Sync** — migrates then re-syncs every 5 minutes
+5. Click **Start Migration**
 
-## License
-For open source projects, say how it is licensed.
+### 3. Monitor progress
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+The dashboard shows:
+- Overall progress bar with total/migrated/failed message counts
+- Per-account progress with status badges
+- Pause, cancel, and retry controls
+- Click any account row to see per-folder breakdown and error log
+
+## IMAP Ports
+
+| Port | Protocol | When to use |
+|------|----------|-------------|
+| **993** | IMAP over SSL/TLS | Most providers (Gmail, Outlook, Yahoo, etc.) |
+| **143** | IMAP with STARTTLS | Some self-hosted servers |
+
+Port 993 is used by default if omitted from the CSV.
+
+## Architecture
+
+```
+Docker Container (port 3000)
+├── Express Server
+│   ├── REST API (/api/*)
+│   ├── SSE endpoint (/api/events)
+│   └── Static file serving (React build)
+├── Migration Engine
+│   ├── Async queue (max 5 concurrent accounts)
+│   └── Account Migrator (ImapFlow wrapper)
+└── SQLite Database (/data/mailswitch.db)
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Runtime | Node.js 20 LTS |
+| Backend | Express 4 |
+| IMAP | imapflow |
+| Database | SQLite via better-sqlite3 |
+| CSV parsing | papaparse |
+| Real-time | Server-Sent Events |
+| Frontend | React 18 + Vite 5 + Tailwind CSS 3 |
+| Container | Docker multi-stage build |
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/upload` | Upload and validate CSV file |
+| `POST` | `/api/jobs` | Create migration job |
+| `GET` | `/api/jobs/:id` | Get job status with accounts |
+| `POST` | `/api/jobs/:id/start` | Start or resume migration |
+| `POST` | `/api/jobs/:id/pause` | Pause migration |
+| `POST` | `/api/jobs/:id/cancel` | Cancel migration |
+| `POST` | `/api/jobs/:id/retry-failed` | Retry all failed accounts |
+| `POST` | `/api/jobs/:id/sync` | Toggle continuous sync |
+| `GET` | `/api/accounts/:id` | Account detail with folder breakdown |
+| `GET` | `/api/accounts/:id/errors` | Error log for an account |
+| `POST` | `/api/accounts/:id/retry` | Retry single failed account |
+| `GET` | `/api/events?job_id=X` | SSE stream for real-time updates |
+| `GET` | `/api/health` | Health check |
+
+## Configuration
+
+Environment variables (set in `docker-compose.yml`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | Server port |
+| `DB_PATH` | `/data/mailswitch.db` | SQLite database path |
+| `MAX_CONCURRENT` | `5` | Max parallel account migrations |
+| `SYNC_INTERVAL` | `300` | Continuous sync interval in seconds |
+| `MAX_RETRIES` | `3` | Connection retry attempts |
+| `MESSAGE_RETRIES` | `2` | Per-message retry attempts |
+| `LOG_LEVEL` | `info` | Log level (error, warn, info, debug) |
+
+## Data Persistence
+
+Migration data is stored in a Docker volume (`mailswitch-data`). Stopping and restarting the container preserves all job history, progress, and error logs.
+
+## Development
+
+To run locally without Docker:
+
+```bash
+# Terminal 1: Start server
+cd server
+npm install
+DB_PATH=./data/mailswitch.db UPLOAD_DIR=./data/uploads node index.js
+
+# Terminal 2: Start frontend dev server
+cd client
+npm install
+npm run dev
+```
+
+The Vite dev server proxies `/api` requests to `http://localhost:3000`.
+
+## Project Structure
+
+```
+MailSwitch/
+├── docker-compose.yml
+├── Dockerfile
+├── server/
+│   ├── index.js                  # Express entry point
+│   ├── config.js                 # Environment config
+│   ├── db/
+│   │   ├── database.js           # SQLite init + query helpers
+│   │   └── schema.sql            # Table definitions
+│   ├── routes/
+│   │   ├── upload.js             # CSV upload
+│   │   ├── jobs.js               # Job CRUD + controls
+│   │   ├── accounts.js           # Account status + errors
+│   │   └── events.js             # SSE stream
+│   ├── services/
+│   │   ├── csv-parser.js         # CSV parsing + validation
+│   │   ├── migration-engine.js   # Orchestrator + queue
+│   │   ├── account-migrator.js   # Single account migration
+│   │   ├── imap-client.js        # ImapFlow wrapper
+│   │   ├── delta-sync.js         # Incremental sync logic
+│   │   ├── event-bus.js          # EventEmitter for SSE
+│   │   └── queue.js              # Concurrency-limited queue
+│   ├── middleware/
+│   │   ├── error-handler.js      # Global error handler
+│   │   └── upload-middleware.js   # Multer config
+│   └── utils/
+│       ├── logger.js             # Structured JSON logging
+│       ├── retry.js              # Retry with backoff
+│       └── validators.js         # Input validation
+└── client/
+    ├── src/
+    │   ├── pages/
+    │   │   ├── UploadPage.jsx        # CSV upload + preview
+    │   │   ├── DashboardPage.jsx     # Job progress + controls
+    │   │   └── AccountDetailPage.jsx # Folder + error detail
+    │   ├── components/               # Reusable UI components
+    │   ├── hooks/
+    │   │   ├── useSSE.js             # SSE connection hook
+    │   │   └── useMigrationState.js  # Job state management
+    │   └── lib/
+    │       ├── api.js                # API client
+    │       └── format.js             # Formatting helpers
+    └── vite.config.js
+```
