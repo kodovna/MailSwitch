@@ -1,16 +1,20 @@
 # MailSwitch
 
-Self-hosted bulk email migration tool that transfers up to 50 email accounts between IMAP servers. Single `docker-compose up` command to run, with a web UI for uploading account mappings and monitoring real-time migration progress.
+Self-hosted bulk email migration tool that transfers up to 50 email accounts between IMAP servers. Single `docker-compose up` command to run, with a web UI for configuring servers, verifying accounts, and monitoring real-time migration progress.
 
 ## Features
 
+- **Guided 3-step wizard** — Server Config → Upload CSV → Preview & Start
+- **IMAP connectivity test** — verify source/destination servers before uploading accounts
+- **Account authentication check** — validate all credentials before starting migration
 - Migrate up to 50 IMAP accounts in parallel (5 concurrent by default)
 - Full migration, delta sync (incremental), and continuous sync modes
+- **Resync button** — catch up new emails after a completed one-time migration
 - Real-time progress tracking via Server-Sent Events
 - Per-account and per-folder progress with error logging
 - Pause, resume, cancel, and retry controls
-- CSV-based account mapping with drag-and-drop upload
-- SSL/TLS (port 993) and STARTTLS (port 143) support
+- Simplified 4-column CSV format (server config set once per job)
+- SSL/TLS (port 993) and STARTTLS (port 143) support, including self-signed certificates
 - SQLite database with Docker volume persistence
 - Automatic retry with exponential backoff on connection/message errors
 
@@ -26,44 +30,55 @@ Open **http://localhost:3000** in your browser.
 
 ## Usage
 
-### 1. Prepare a CSV file
+### 1. Configure IMAP servers
 
-Create a CSV file with your account mappings:
+Enter the source and destination IMAP server details (host and port), then click **Test Connections**. Both servers must respond with an IMAP greeting before proceeding.
+
+Once both show green checkmarks, click **Next**.
+
+### 2. Upload account CSV
+
+Prepare a CSV file with account credentials:
 
 ```csv
-src_email,src_password,src_host,src_port,dst_email,dst_password,dst_host,dst_port
-user1@old.com,pass1,imap.old.com,993,user1@new.com,newpass1,imap.new.com,993
-user2@old.com,pass2,imap.old.com,,user2@new.com,newpass2,imap.new.com,
+src_email,src_password,dst_email,dst_password
+user1@old.com,pass1,user1@new.com,newpass1
+user2@old.com,pass2,user2@new.com,newpass2
 ```
 
 | Column | Required | Description |
 |--------|----------|-------------|
 | `src_email` | Yes | Source email address |
 | `src_password` | Yes | Source email password |
-| `src_host` | Yes | Source IMAP server hostname |
-| `src_port` | No | Source IMAP port (default: 993) |
 | `dst_email` | Yes | Destination email address |
 | `dst_password` | Yes | Destination email password |
-| `dst_host` | Yes | Destination IMAP server hostname |
-| `dst_port` | No | Destination IMAP port (default: 993) |
 
-### 2. Upload and start migration
+Server host/port are configured once in Step 1 and apply to all accounts in the job.
 
-1. Open **http://localhost:3000**
-2. Drag and drop your CSV file (or click to browse)
-3. Review the parsed account list
+Drag and drop the CSV file (or click to browse).
+
+### 3. Verify and start
+
+1. Review the parsed account list
+2. Click **Verify Accounts** — authenticates every account against both servers
+3. All accounts must pass verification (green checkmarks) before migration can start
 4. Select migration mode:
    - **One-time Migration** — migrates all emails once
    - **Continuous Sync** — migrates then re-syncs every 5 minutes
 5. Click **Start Migration**
 
-### 3. Monitor progress
+### 4. Monitor progress
 
 The dashboard shows:
+- Server info (`source:port → destination:port`) in the job header
 - Overall progress bar with total/migrated/failed message counts
 - Per-account progress with status badges
 - Pause, cancel, and retry controls
 - Click any account row to see per-folder breakdown and error log
+
+### 5. Resync (catch up new emails)
+
+After a one-time migration completes, a **Resync** button appears on the dashboard. Click it to run a delta sync that picks up any new emails that arrived since the last migration. Only new messages are transferred (uses IMAP UID tracking).
 
 ## IMAP Ports
 
@@ -72,7 +87,7 @@ The dashboard shows:
 | **993** | IMAP over SSL/TLS | Most providers (Gmail, Outlook, Yahoo, etc.) |
 | **143** | IMAP with STARTTLS | Some self-hosted servers |
 
-Port 993 is used by default if omitted from the CSV.
+Port 993 is used by default. Self-signed certificates are accepted.
 
 ## Architecture
 
@@ -106,12 +121,15 @@ Docker Container (port 3000)
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/upload` | Upload and validate CSV file |
-| `POST` | `/api/jobs` | Create migration job |
+| `POST` | `/api/jobs/test-connection` | Test IMAP server connectivity |
+| `POST` | `/api/jobs/test-auth` | Test IMAP account authentication |
+| `POST` | `/api/jobs` | Create migration job (with server config) |
 | `GET` | `/api/jobs/:id` | Get job status with accounts |
 | `POST` | `/api/jobs/:id/start` | Start or resume migration |
 | `POST` | `/api/jobs/:id/pause` | Pause migration |
 | `POST` | `/api/jobs/:id/cancel` | Cancel migration |
 | `POST` | `/api/jobs/:id/retry-failed` | Retry all failed accounts |
+| `POST` | `/api/jobs/:id/resync` | Resync completed job (delta sync) |
 | `POST` | `/api/jobs/:id/sync` | Toggle continuous sync |
 | `GET` | `/api/accounts/:id` | Account detail with folder breakdown |
 | `GET` | `/api/accounts/:id/errors` | Error log for an account |
@@ -169,14 +187,14 @@ MailSwitch/
 │   │   └── schema.sql            # Table definitions
 │   ├── routes/
 │   │   ├── upload.js             # CSV upload
-│   │   ├── jobs.js               # Job CRUD + controls
+│   │   ├── jobs.js               # Job CRUD + controls + connectivity tests
 │   │   ├── accounts.js           # Account status + errors
 │   │   └── events.js             # SSE stream
 │   ├── services/
 │   │   ├── csv-parser.js         # CSV parsing + validation
 │   │   ├── migration-engine.js   # Orchestrator + queue
 │   │   ├── account-migrator.js   # Single account migration
-│   │   ├── imap-client.js        # ImapFlow wrapper
+│   │   ├── imap-client.js        # ImapFlow wrapper + connectivity/auth tests
 │   │   ├── delta-sync.js         # Incremental sync logic
 │   │   ├── event-bus.js          # EventEmitter for SSE
 │   │   └── queue.js              # Concurrency-limited queue
@@ -186,14 +204,18 @@ MailSwitch/
 │   └── utils/
 │       ├── logger.js             # Structured JSON logging
 │       ├── retry.js              # Retry with backoff
-│       └── validators.js         # Input validation
+│       └── validators.js         # Input + server config validation
 └── client/
     ├── src/
     │   ├── pages/
-    │   │   ├── UploadPage.jsx        # CSV upload + preview
+    │   │   ├── UploadPage.jsx        # 3-step migration wizard
     │   │   ├── DashboardPage.jsx     # Job progress + controls
     │   │   └── AccountDetailPage.jsx # Folder + error detail
-    │   ├── components/               # Reusable UI components
+    │   ├── components/
+    │   │   ├── ServerConfigForm.jsx  # Server config + connectivity test
+    │   │   ├── CsvUploader.jsx       # Drag-and-drop CSV upload
+    │   │   ├── CsvPreview.jsx        # Account preview with auth status
+    │   │   └── ...                   # Other UI components
     │   ├── hooks/
     │   │   ├── useSSE.js             # SSE connection hook
     │   │   └── useMigrationState.js  # Job state management
