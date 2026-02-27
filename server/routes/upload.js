@@ -15,14 +15,11 @@ router.post('/', upload.single('file'), (req, res) => {
     return res.status(400).json({ errors, accounts: [] });
   }
 
-  // Return sanitized accounts without passwords for preview
   const preview = accounts.map((a) => ({
     src_email: a.src_email,
     dst_email: a.dst_email,
   }));
 
-  // Store full accounts in memory for job creation (keyed by request)
-  // We send them back to the client which will POST them to /api/jobs
   res.json({ accounts, preview, count: accounts.length });
 });
 

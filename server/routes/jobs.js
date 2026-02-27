@@ -8,26 +8,26 @@ const router = Router();
 
 // Test IMAP server connectivity
 router.post('/test-connection', async (req, res) => {
-  const { host, port = 993 } = req.body;
+  const { host, port = 993, security = 'ssl' } = req.body;
 
   const errors = validateServerConfig({ host, port });
   if (errors.length > 0) {
     return res.status(400).json({ success: false, error: errors.join(', ') });
   }
 
-  const result = await ImapClient.testConnection({ host, port: Number(port) });
+  const result = await ImapClient.testConnection({ host, port: Number(port), security });
   res.json(result);
 });
 
 // Test IMAP authentication for a single account
 router.post('/test-auth', async (req, res) => {
-  const { host, port = 993, email, password } = req.body;
+  const { host, port = 993, security = 'ssl', email, password } = req.body;
 
   if (!host || !email || !password) {
     return res.status(400).json({ success: false, error: 'host, email, and password are required' });
   }
 
-  const result = await ImapClient.testAuth({ host, port: Number(port), email, password });
+  const result = await ImapClient.testAuth({ host, port: Number(port), security, email, password });
   res.json(result);
 });
 
@@ -43,13 +43,27 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Maximum 50 accounts allowed' });
   }
 
-  const { srcHost, srcPort = 993, dstHost, dstPort = 993 } = serverConfig;
+  // Validate mode
+  if (!['full', 'continuous'].includes(mode)) {
+    return res.status(400).json({ error: 'Invalid mode' });
+  }
+
+  // Validate and clamp sync interval
+  const clampedInterval = Math.max(60, Math.min(86400, Number(syncInterval) || 300));
+
+  const { srcHost, srcPort = 993, srcSecurity = 'ssl', dstHost, dstPort = 993, dstSecurity = 'ssl' } = serverConfig;
   if (!srcHost || !dstHost) {
     return res.status(400).json({ error: 'Server config (srcHost, dstHost) is required' });
   }
 
-  const result = jobQueries.create(mode, accounts.length, syncInterval, {
-    srcHost, srcPort: Number(srcPort), dstHost, dstPort: Number(dstPort),
+  // Validate security values
+  const validSecurity = ['ssl', 'starttls', 'none'];
+  if (!validSecurity.includes(srcSecurity) || !validSecurity.includes(dstSecurity)) {
+    return res.status(400).json({ error: 'Invalid security mode' });
+  }
+
+  const result = jobQueries.create(mode, accounts.length, clampedInterval, {
+    srcHost, srcPort: Number(srcPort), srcSecurity, dstHost, dstPort: Number(dstPort), dstSecurity,
   });
   const jobId = result.lastInsertRowid;
 
@@ -70,7 +84,9 @@ router.get('/:id', (req, res) => {
   const job = jobQueries.getById(req.params.id);
   if (!job) return res.status(404).json({ error: 'Job not found' });
 
-  const accounts = accountQueries.getByJobId(job.id);
+  const accounts = accountQueries.getByJobId(job.id).map(
+    ({ src_password, dst_password, ...rest }) => rest
+  );
   res.json({ ...job, accounts, syncing: migrationEngine.isSyncing(job.id) });
 });
 

@@ -42,14 +42,15 @@ export class AccountMigrator {
     eventBus.emitAccountUpdate(jobId, account.id, { status: 'running' });
 
     try {
-      // Connect to both servers with retry (host/port from job-level config)
-      const { src_host, src_port, dst_host, dst_port } = this.job;
+      // Connect to both servers with retry (host/port/security from job-level config)
+      const { src_host, src_port, src_security, dst_host, dst_port, dst_security } = this.job;
 
       this.srcClient = await retry(
         () => {
           const client = new ImapClient({
             host: src_host,
             port: src_port,
+            security: src_security || 'ssl',
             email: account.src_email,
             password: account.src_password,
             label: `src:${account.src_email}`,
@@ -64,6 +65,7 @@ export class AccountMigrator {
           const client = new ImapClient({
             host: dst_host,
             port: dst_port,
+            security: dst_security || 'ssl',
             email: account.dst_email,
             password: account.dst_password,
             label: `dst:${account.dst_email}`,

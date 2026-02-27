@@ -23,7 +23,7 @@ class MigrationEngine {
     const queue = new AsyncQueue(config.maxConcurrentAccounts);
     this.queues.set(jobId, queue);
 
-    const accounts = accountQueries.getPendingByJobId(jobId);
+    const accounts = accountQueries.getPendingByJobIdDecrypted(jobId);
     if (accounts.length === 0) {
       jobQueries.updateStatus(jobId, 'completed');
       eventBus.emitJobUpdate(jobId, { status: 'completed' });

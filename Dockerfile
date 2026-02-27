@@ -17,7 +17,13 @@ RUN npm install --omit=dev --build-from-source && apk del python3 make g++
 COPY server/ ./
 COPY --from=client-build /app/client/dist /app/client/dist
 
-RUN mkdir -p /data/uploads
+# Create non-root user and data directory
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup && \
+    mkdir -p /data/uploads && \
+    chown -R appuser:appgroup /data
+
+USER appuser
 
 EXPOSE 3000
 ENV NODE_ENV=production

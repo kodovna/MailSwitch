@@ -4,6 +4,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,11 +29,11 @@ export function getDb() {
 
 // Job helpers
 export const jobQueries = {
-  create(mode, totalAccounts, syncInterval = 300, { srcHost = '', srcPort = 993, dstHost = '', dstPort = 993 } = {}) {
+  create(mode, totalAccounts, syncInterval = 300, { srcHost = '', srcPort = 993, srcSecurity = 'ssl', dstHost = '', dstPort = 993, dstSecurity = 'ssl' } = {}) {
     const stmt = getDb().prepare(
-      `INSERT INTO migration_jobs (mode, total_accounts, sync_interval, src_host, src_port, dst_host, dst_port) VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO migration_jobs (mode, total_accounts, sync_interval, src_host, src_port, src_security, dst_host, dst_port, dst_security) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
-    return stmt.run(mode, totalAccounts, syncInterval, srcHost, srcPort, dstHost, dstPort);
+    return stmt.run(mode, totalAccounts, syncInterval, srcHost, srcPort, srcSecurity, dstHost, dstPort, dstSecurity);
   },
 
   getById(id) {
@@ -78,7 +79,7 @@ export const accountQueries = {
     `);
     const insertMany = getDb().transaction((rows) => {
       for (const row of rows) {
-        stmt.run(jobId, row.src_email, row.src_password, row.dst_email, row.dst_password);
+        stmt.run(jobId, row.src_email, encrypt(row.src_password), row.dst_email, encrypt(row.dst_password));
       }
     });
     insertMany(accounts);
@@ -92,10 +93,25 @@ export const accountQueries = {
     return getDb().prepare('SELECT * FROM accounts WHERE id = ?').get(id);
   },
 
+  // Returns account with decrypted passwords — only for IMAP connections
+  getByIdDecrypted(id) {
+    const row = getDb().prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+    if (!row) return row;
+    return { ...row, src_password: decrypt(row.src_password), dst_password: decrypt(row.dst_password) };
+  },
+
   getPendingByJobId(jobId) {
     return getDb().prepare(
       "SELECT * FROM accounts WHERE job_id = ? AND status IN ('pending', 'failed') ORDER BY id"
     ).all(jobId);
+  },
+
+  // Returns pending accounts with decrypted passwords — only for migration
+  getPendingByJobIdDecrypted(jobId) {
+    const rows = getDb().prepare(
+      "SELECT * FROM accounts WHERE job_id = ? AND status IN ('pending', 'failed') ORDER BY id"
+    ).all(jobId);
+    return rows.map((r) => ({ ...r, src_password: decrypt(r.src_password), dst_password: decrypt(r.dst_password) }));
   },
 
   getRunningByJobId(jobId) {

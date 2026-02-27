@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useMigrationState } from '../hooks/useMigrationState';
 import OverallProgress from '../components/OverallProgress';
 import AccountTable from '../components/AccountTable';
@@ -37,12 +37,22 @@ export default function DashboardPage() {
 
   return (
     <div>
+      <div className="mb-4">
+        <Link to="/jobs" className="text-sm text-indigo-600 hover:underline">
+          &larr; All Jobs
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Job #{job.id}</h1>
           {job.src_host && (
             <p className="text-sm text-gray-500 mt-1">
-              {job.src_host}:{job.src_port} &rarr; {job.dst_host}:{job.dst_port}
+              {job.src_host}:{job.src_port}
+              {job.src_security && job.src_security !== 'ssl' && ` (${job.src_security.toUpperCase()})`}
+              {' '}&rarr;{' '}
+              {job.dst_host}:{job.dst_port}
+              {job.dst_security && job.dst_security !== 'ssl' && ` (${job.dst_security.toUpperCase()})`}
             </p>
           )}
         </div>

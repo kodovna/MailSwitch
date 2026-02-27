@@ -8,8 +8,10 @@ CREATE TABLE IF NOT EXISTS migration_jobs (
   sync_interval INTEGER NOT NULL DEFAULT 300,
   src_host TEXT NOT NULL DEFAULT '',
   src_port INTEGER NOT NULL DEFAULT 993,
+  src_security TEXT NOT NULL DEFAULT 'ssl' CHECK(src_security IN ('ssl','starttls','none')),
   dst_host TEXT NOT NULL DEFAULT '',
   dst_port INTEGER NOT NULL DEFAULT 993,
+  dst_security TEXT NOT NULL DEFAULT 'ssl' CHECK(dst_security IN ('ssl','starttls','none')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   started_at TEXT,
@@ -68,3 +70,8 @@ CREATE TABLE IF NOT EXISTS migration_errors (
 );
 
 CREATE INDEX IF NOT EXISTS idx_migration_errors_account_id ON migration_errors(account_id);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);

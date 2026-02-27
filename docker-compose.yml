@@ -5,6 +5,11 @@ services:
       - "3000:3000"
     volumes:
       - mailswitch-data:/data
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - ALLOW_SELF_SIGNED_CERTS=${ALLOW_SELF_SIGNED_CERTS:-false}
     restart: unless-stopped
 
 volumes:

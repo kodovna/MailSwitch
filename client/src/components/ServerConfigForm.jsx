@@ -1,16 +1,77 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
 
+const SECURITY_OPTIONS = [
+  { value: 'ssl', label: 'SSL/TLS', port: 993, desc: 'Implicit TLS (recommended)' },
+  { value: 'starttls', label: 'STARTTLS', port: 143, desc: 'Upgrade to TLS after connect' },
+  { value: 'none', label: 'None', port: 143, desc: 'Plain text (air-gapped / internal)' },
+];
+
+function SecuritySelect({ value, onChange }) {
+  return (
+    <div className="flex gap-2">
+      {SECURITY_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+            value === opt.value
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StatusMessage({ status, error }) {
+  if (status === 'success') {
+    return (
+      <p className="text-sm text-green-600 flex items-center gap-1">
+        <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-green-100">&#10003;</span>
+        Connected successfully
+      </p>
+    );
+  }
+  if (status === 'error') {
+    return (
+      <p className="text-sm text-red-600 flex items-center gap-1">
+        <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-red-100">&#10007;</span>
+        {error}
+      </p>
+    );
+  }
+  return null;
+}
+
 export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
   const [srcHost, setSrcHost] = useState(initialConfig?.srcHost || '');
   const [srcPort, setSrcPort] = useState(initialConfig?.srcPort || 993);
+  const [srcSecurity, setSrcSecurity] = useState(initialConfig?.srcSecurity || 'ssl');
   const [dstHost, setDstHost] = useState(initialConfig?.dstHost || '');
   const [dstPort, setDstPort] = useState(initialConfig?.dstPort || 993);
+  const [dstSecurity, setDstSecurity] = useState(initialConfig?.dstSecurity || 'ssl');
   const [testing, setTesting] = useState(false);
-  const [srcStatus, setSrcStatus] = useState(null); // null | 'loading' | 'success' | 'error'
+  const [srcStatus, setSrcStatus] = useState(null);
   const [dstStatus, setDstStatus] = useState(null);
   const [srcError, setSrcError] = useState('');
   const [dstError, setDstError] = useState('');
+
+  function handleSrcSecurityChange(sec) {
+    setSrcSecurity(sec);
+    setSrcPort(SECURITY_OPTIONS.find((o) => o.value === sec).port);
+    setSrcStatus(null);
+  }
+
+  function handleDstSecurityChange(sec) {
+    setDstSecurity(sec);
+    setDstPort(SECURITY_OPTIONS.find((o) => o.value === sec).port);
+    setDstStatus(null);
+  }
 
   async function handleTest() {
     setTesting(true);
@@ -20,8 +81,8 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
     setDstError('');
 
     const [srcResult, dstResult] = await Promise.all([
-      api.testConnection(srcHost, srcPort).catch((err) => ({ success: false, error: err.message })),
-      api.testConnection(dstHost, dstPort).catch((err) => ({ success: false, error: err.message })),
+      api.testConnection(srcHost, srcPort, srcSecurity).catch((err) => ({ success: false, error: err.message })),
+      api.testConnection(dstHost, dstPort, dstSecurity).catch((err) => ({ success: false, error: err.message })),
     ]);
 
     setSrcStatus(srcResult.success ? 'success' : 'error');
@@ -53,6 +114,13 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
               />
             </div>
             <div>
+              <label className="block text-sm text-gray-600 mb-1">Security</label>
+              <SecuritySelect value={srcSecurity} onChange={handleSrcSecurityChange} />
+              <p className="text-xs text-gray-400 mt-1">
+                {SECURITY_OPTIONS.find((o) => o.value === srcSecurity).desc}
+              </p>
+            </div>
+            <div>
               <label className="block text-sm text-gray-600 mb-1">Port</label>
               <input
                 type="number"
@@ -61,18 +129,7 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            {srcStatus === 'success' && (
-              <p className="text-sm text-green-600 flex items-center gap-1">
-                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-green-100">&#10003;</span>
-                Connected successfully
-              </p>
-            )}
-            {srcStatus === 'error' && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-red-100">&#10007;</span>
-                {srcError}
-              </p>
-            )}
+            <StatusMessage status={srcStatus} error={srcError} />
           </div>
         </div>
 
@@ -90,6 +147,13 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
               />
             </div>
             <div>
+              <label className="block text-sm text-gray-600 mb-1">Security</label>
+              <SecuritySelect value={dstSecurity} onChange={handleDstSecurityChange} />
+              <p className="text-xs text-gray-400 mt-1">
+                {SECURITY_OPTIONS.find((o) => o.value === dstSecurity).desc}
+              </p>
+            </div>
+            <div>
               <label className="block text-sm text-gray-600 mb-1">Port</label>
               <input
                 type="number"
@@ -98,18 +162,7 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            {dstStatus === 'success' && (
-              <p className="text-sm text-green-600 flex items-center gap-1">
-                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-green-100">&#10003;</span>
-                Connected successfully
-              </p>
-            )}
-            {dstStatus === 'error' && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-red-100">&#10007;</span>
-                {dstError}
-              </p>
-            )}
+            <StatusMessage status={dstStatus} error={dstError} />
           </div>
         </div>
       </div>
@@ -136,7 +189,10 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
 
         {bothPassed && (
           <button
-            onClick={() => onConfigVerified({ srcHost, srcPort: Number(srcPort), dstHost, dstPort: Number(dstPort) })}
+            onClick={() => onConfigVerified({
+              srcHost, srcPort: Number(srcPort), srcSecurity,
+              dstHost, dstPort: Number(dstPort), dstSecurity,
+            })}
             className="px-6 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700"
           >
             Next

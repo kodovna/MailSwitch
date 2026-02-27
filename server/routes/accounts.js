@@ -39,7 +39,9 @@ router.get('/:id/errors', (req, res) => {
   const account = accountQueries.getById(req.params.id);
   if (!account) return res.status(404).json({ error: 'Account not found' });
 
-  const errors = errorQueries.getByAccountId(account.id, Number(limit), Number(offset));
+  const clampedLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+  const clampedOffset = Math.max(0, Number(offset) || 0);
+  const errors = errorQueries.getByAccountId(account.id, clampedLimit, clampedOffset);
   const total = errorQueries.countByAccountId(account.id);
   res.json({ errors, total });
 });

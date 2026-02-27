@@ -3,35 +3,59 @@ const BASE = '/api';
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
+    credentials: 'include',
     ...options,
   });
+  if (res.status === 401) {
+    window.location.reload();
+    throw new Error('Session expired');
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
 
+export const setup = {
+  getStatus() {
+    return fetch(`${BASE}/setup/status`, { credentials: 'include' }).then((res) => res.json());
+  },
+  complete(password) {
+    return fetch(`${BASE}/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+      credentials: 'include',
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Setup failed');
+      return data;
+    });
+  },
+};
+
 export const api = {
   uploadCsv(file) {
     const form = new FormData();
     form.append('file', file);
-    return fetch(`${BASE}/upload`, { method: 'POST', body: form }).then(async (res) => {
+    return fetch(`${BASE}/upload`, { method: 'POST', body: form, credentials: 'include' }).then(async (res) => {
+      if (res.status === 401) { window.location.reload(); throw new Error('Session expired'); }
       const data = await res.json();
       if (!res.ok) throw new Error(data.errors?.join(', ') || data.error || 'Upload failed');
       return data;
     });
   },
 
-  testConnection(host, port) {
+  testConnection(host, port, security = 'ssl') {
     return request('/jobs/test-connection', {
       method: 'POST',
-      body: JSON.stringify({ host, port: Number(port) }),
+      body: JSON.stringify({ host, port: Number(port), security }),
     });
   },
 
-  testAuth(host, port, email, password) {
+  testAuth(host, port, security, email, password) {
     return request('/jobs/test-auth', {
       method: 'POST',
-      body: JSON.stringify({ host, port: Number(port), email, password }),
+      body: JSON.stringify({ host, port: Number(port), security, email, password }),
     });
   },
 

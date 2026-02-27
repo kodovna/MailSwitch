@@ -1,15 +1,20 @@
 import { ImapFlow } from 'imapflow';
 import tls from 'tls';
 import net from 'net';
+import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 
+function tlsOptions() {
+  return config.allowSelfSignedCerts ? { rejectUnauthorized: false } : {};
+}
+
 export class ImapClient {
-  static async testConnection({ host, port, timeoutMs = 10000 }) {
+  static async testConnection({ host, port, security = 'ssl', timeoutMs = 10000 }) {
     return new Promise((resolve) => {
-      const isSecure = port !== 143;
-      const connectFn = isSecure ? tls.connect : net.connect;
-      const options = isSecure
-        ? { host, port, rejectUnauthorized: false }
+      const useTls = security === 'ssl';
+      const connectFn = useTls ? tls.connect : net.connect;
+      const options = useTls
+        ? { host, port, ...tlsOptions() }
         : { host, port };
 
       let settled = false;
@@ -56,16 +61,15 @@ export class ImapClient {
     });
   }
 
-  static async testAuth({ host, port, email, password, timeoutMs = 15000 }) {
-    const secure = port !== 143;
+  static async testAuth({ host, port, security = 'ssl', email, password, timeoutMs = 15000 }) {
     const client = new ImapFlow({
       host,
       port,
-      secure,
+      secure: security === 'ssl',
       auth: { user: email, pass: password },
       logger: false,
       emitLogs: false,
-      tls: { rejectUnauthorized: false },
+      tls: tlsOptions(),
     });
 
     try {
@@ -83,18 +87,16 @@ export class ImapClient {
     }
   }
 
-  constructor({ host, port, email, password, label = '' }) {
+  constructor({ host, port, security = 'ssl', email, password, label = '' }) {
     this.label = label || email;
-    // Port 993 = implicit TLS, port 143 = STARTTLS upgrade
-    const secure = port !== 143;
     this.client = new ImapFlow({
       host,
       port,
-      secure,
+      secure: security === 'ssl',
       auth: { user: email, pass: password },
       logger: false,
       emitLogs: false,
-      tls: { rejectUnauthorized: false },
+      tls: tlsOptions(),
     });
   }
 
