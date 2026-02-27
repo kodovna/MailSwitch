@@ -1,7 +1,88 @@
 import { ImapFlow } from 'imapflow';
+import tls from 'tls';
+import net from 'net';
 import { logger } from '../utils/logger.js';
 
 export class ImapClient {
+  static async testConnection({ host, port, timeoutMs = 10000 }) {
+    return new Promise((resolve) => {
+      const isSecure = port !== 143;
+      const connectFn = isSecure ? tls.connect : net.connect;
+      const options = isSecure
+        ? { host, port, rejectUnauthorized: false }
+        : { host, port };
+
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          socket.destroy();
+          resolve({ success: false, error: `Connection timed out after ${timeoutMs}ms` });
+        }
+      }, timeoutMs);
+
+      const socket = connectFn(options, () => {
+        logger.debug(`Test connection established to ${host}:${port}`);
+      });
+
+      let data = '';
+      socket.on('data', (chunk) => {
+        data += chunk.toString();
+        if (data.includes('* OK') || data.includes('* ok')) {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            socket.destroy();
+            resolve({ success: true });
+          }
+        }
+      });
+
+      socket.on('error', (err) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve({ success: false, error: err.message });
+        }
+      });
+
+      socket.on('close', () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve({ success: false, error: 'Connection closed without IMAP greeting' });
+        }
+      });
+    });
+  }
+
+  static async testAuth({ host, port, email, password, timeoutMs = 15000 }) {
+    const secure = port !== 143;
+    const client = new ImapFlow({
+      host,
+      port,
+      secure,
+      auth: { user: email, pass: password },
+      logger: false,
+      emitLogs: false,
+      tls: { rejectUnauthorized: false },
+    });
+
+    try {
+      await Promise.race([
+        client.connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Authentication timed out')), timeoutMs)
+        ),
+      ]);
+      await client.logout();
+      return { success: true };
+    } catch (err) {
+      try { await client.logout(); } catch { /* ignore */ }
+      return { success: false, error: err.message };
+    }
+  }
+
   constructor({ host, port, email, password, label = '' }) {
     this.label = label || email;
     // Port 993 = implicit TLS, port 143 = STARTTLS upgrade
@@ -13,6 +94,7 @@ export class ImapClient {
       auth: { user: email, pass: password },
       logger: false,
       emitLogs: false,
+      tls: { rejectUnauthorized: false },
     });
   }
 

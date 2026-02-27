@@ -6,9 +6,10 @@ import { retry, retryMessage } from '../utils/retry.js';
 import { logger } from '../utils/logger.js';
 
 export class AccountMigrator {
-  constructor(account, jobId) {
+  constructor(account, job) {
     this.account = account;
-    this.jobId = jobId;
+    this.job = job;
+    this.jobId = job.id;
     this.cancelled = false;
     this.paused = false;
     this.srcClient = null;
@@ -41,12 +42,14 @@ export class AccountMigrator {
     eventBus.emitAccountUpdate(jobId, account.id, { status: 'running' });
 
     try {
-      // Connect to both servers with retry
+      // Connect to both servers with retry (host/port from job-level config)
+      const { src_host, src_port, dst_host, dst_port } = this.job;
+
       this.srcClient = await retry(
         () => {
           const client = new ImapClient({
-            host: account.src_host,
-            port: account.src_port,
+            host: src_host,
+            port: src_port,
             email: account.src_email,
             password: account.src_password,
             label: `src:${account.src_email}`,
@@ -59,8 +62,8 @@ export class AccountMigrator {
       this.dstClient = await retry(
         () => {
           const client = new ImapClient({
-            host: account.dst_host,
-            port: account.dst_port,
+            host: dst_host,
+            port: dst_port,
             email: account.dst_email,
             password: account.dst_password,
             label: `dst:${account.dst_email}`,

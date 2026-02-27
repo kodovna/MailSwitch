@@ -21,10 +21,24 @@ export const api = {
     });
   },
 
-  createJob(accounts, mode = 'full', syncInterval = 300) {
+  testConnection(host, port) {
+    return request('/jobs/test-connection', {
+      method: 'POST',
+      body: JSON.stringify({ host, port: Number(port) }),
+    });
+  },
+
+  testAuth(host, port, email, password) {
+    return request('/jobs/test-auth', {
+      method: 'POST',
+      body: JSON.stringify({ host, port: Number(port), email, password }),
+    });
+  },
+
+  createJob(accounts, mode = 'full', syncInterval = 300, serverConfig = {}) {
     return request('/jobs', {
       method: 'POST',
-      body: JSON.stringify({ accounts, mode, syncInterval }),
+      body: JSON.stringify({ accounts, mode, syncInterval, serverConfig }),
     });
   },
 
@@ -50,6 +64,10 @@ export const api = {
 
   retryFailed(id) {
     return request(`/jobs/${id}/retry-failed`, { method: 'POST' });
+  },
+
+  resyncJob(id) {
+    return request(`/jobs/${id}/resync`, { method: 'POST' });
   },
 
   toggleSync(id) {

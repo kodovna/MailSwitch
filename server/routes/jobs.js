@@ -1,12 +1,39 @@
 import { Router } from 'express';
 import { jobQueries, accountQueries } from '../db/database.js';
 import { migrationEngine } from '../services/migration-engine.js';
+import { ImapClient } from '../services/imap-client.js';
+import { validateServerConfig } from '../utils/validators.js';
 
 const router = Router();
 
+// Test IMAP server connectivity
+router.post('/test-connection', async (req, res) => {
+  const { host, port = 993 } = req.body;
+
+  const errors = validateServerConfig({ host, port });
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, error: errors.join(', ') });
+  }
+
+  const result = await ImapClient.testConnection({ host, port: Number(port) });
+  res.json(result);
+});
+
+// Test IMAP authentication for a single account
+router.post('/test-auth', async (req, res) => {
+  const { host, port = 993, email, password } = req.body;
+
+  if (!host || !email || !password) {
+    return res.status(400).json({ success: false, error: 'host, email, and password are required' });
+  }
+
+  const result = await ImapClient.testAuth({ host, port: Number(port), email, password });
+  res.json(result);
+});
+
 // Create a new migration job
 router.post('/', (req, res) => {
-  const { accounts, mode = 'full', syncInterval = 300 } = req.body;
+  const { accounts, mode = 'full', syncInterval = 300, serverConfig = {} } = req.body;
 
   if (!accounts || !Array.isArray(accounts) || accounts.length === 0) {
     return res.status(400).json({ error: 'No accounts provided' });
@@ -16,7 +43,14 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Maximum 50 accounts allowed' });
   }
 
-  const result = jobQueries.create(mode, accounts.length, syncInterval);
+  const { srcHost, srcPort = 993, dstHost, dstPort = 993 } = serverConfig;
+  if (!srcHost || !dstHost) {
+    return res.status(400).json({ error: 'Server config (srcHost, dstHost) is required' });
+  }
+
+  const result = jobQueries.create(mode, accounts.length, syncInterval, {
+    srcHost, srcPort: Number(srcPort), dstHost, dstPort: Number(dstPort),
+  });
   const jobId = result.lastInsertRowid;
 
   accountQueries.createMany(jobId, accounts);
@@ -84,6 +118,16 @@ router.post('/:id/retry-failed', (req, res) => {
   try {
     migrationEngine.retryFailedAccounts(Number(req.params.id));
     res.json({ status: 'retrying' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Resync — delta sync to catch up new emails
+router.post('/:id/resync', (req, res) => {
+  try {
+    migrationEngine.resyncJob(Number(req.params.id));
+    res.json({ status: 'resyncing' });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

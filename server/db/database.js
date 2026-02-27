@@ -28,11 +28,11 @@ export function getDb() {
 
 // Job helpers
 export const jobQueries = {
-  create(mode, totalAccounts, syncInterval = 300) {
+  create(mode, totalAccounts, syncInterval = 300, { srcHost = '', srcPort = 993, dstHost = '', dstPort = 993 } = {}) {
     const stmt = getDb().prepare(
-      `INSERT INTO migration_jobs (mode, total_accounts, sync_interval) VALUES (?, ?, ?)`
+      `INSERT INTO migration_jobs (mode, total_accounts, sync_interval, src_host, src_port, dst_host, dst_port) VALUES (?, ?, ?, ?, ?, ?, ?)`
     );
-    return stmt.run(mode, totalAccounts, syncInterval);
+    return stmt.run(mode, totalAccounts, syncInterval, srcHost, srcPort, dstHost, dstPort);
   },
 
   getById(id) {
@@ -73,13 +73,12 @@ export const jobQueries = {
 export const accountQueries = {
   createMany(jobId, accounts) {
     const stmt = getDb().prepare(`
-      INSERT INTO accounts (job_id, src_email, src_password, src_host, src_port, dst_email, dst_password, dst_host, dst_port)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO accounts (job_id, src_email, src_password, dst_email, dst_password)
+      VALUES (?, ?, ?, ?, ?)
     `);
     const insertMany = getDb().transaction((rows) => {
       for (const row of rows) {
-        stmt.run(jobId, row.src_email, row.src_password, row.src_host, row.src_port || 993,
-          row.dst_email, row.dst_password, row.dst_host, row.dst_port || 993);
+        stmt.run(jobId, row.src_email, row.src_password, row.dst_email, row.dst_password);
       }
     });
     insertMany(accounts);
@@ -163,6 +162,12 @@ export const accountQueries = {
     getDb().prepare(
       "UPDATE accounts SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'failed'"
     ).run(id);
+  },
+
+  resetCompleted(jobId) {
+    getDb().prepare(
+      "UPDATE accounts SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE job_id = ? AND status = 'completed'"
+    ).run(jobId);
   }
 };
 

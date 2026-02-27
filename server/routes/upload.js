@@ -18,11 +18,7 @@ router.post('/', upload.single('file'), (req, res) => {
   // Return sanitized accounts without passwords for preview
   const preview = accounts.map((a) => ({
     src_email: a.src_email,
-    src_host: a.src_host,
-    src_port: a.src_port,
     dst_email: a.dst_email,
-    dst_host: a.dst_host,
-    dst_port: a.dst_port,
   }));
 
   // Store full accounts in memory for job creation (keyed by request)

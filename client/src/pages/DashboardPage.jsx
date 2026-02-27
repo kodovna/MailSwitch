@@ -38,7 +38,14 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Job #{job.id}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Job #{job.id}</h1>
+          {job.src_host && (
+            <p className="text-sm text-gray-500 mt-1">
+              {job.src_host}:{job.src_port} &rarr; {job.dst_host}:{job.dst_port}
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {job.mode === 'continuous' && (
             <div className="flex items-center gap-2 text-sm">
@@ -98,6 +105,16 @@ export default function DashboardPage() {
               className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 disabled:opacity-50"
             >
               Retry Failed
+            </button>
+          )}
+
+          {job.mode === 'full' && job.status === 'completed' && (
+            <button
+              onClick={() => runAction(() => api.resyncJob(job.id))}
+              disabled={actionLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Resync
             </button>
           )}
         </div>

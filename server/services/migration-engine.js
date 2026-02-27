@@ -32,7 +32,7 @@ class MigrationEngine {
 
     const promises = accounts.map((account) =>
       queue.push(async () => {
-        const migrator = new AccountMigrator(account, jobId);
+        const migrator = new AccountMigrator(account, job);
         this.migrators.set(account.id, migrator);
         try {
           await migrator.migrate();
@@ -150,6 +150,17 @@ class MigrationEngine {
     jobQueries.updateCounts(jobId);
 
     // Restart the job
+    this.startJob(jobId);
+  }
+
+  resyncJob(jobId) {
+    const job = jobQueries.getById(jobId);
+    if (!job) throw new Error('Job not found');
+
+    accountQueries.resetCompleted(jobId);
+    accountQueries.resetFailed(jobId);
+    jobQueries.updateCounts(jobId);
+
     this.startJob(jobId);
   }
 

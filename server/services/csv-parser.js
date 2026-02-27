@@ -2,7 +2,7 @@ import { readFileSync, unlinkSync } from 'fs';
 import Papa from 'papaparse';
 import { validateCsvRow, sanitizeRow } from '../utils/validators.js';
 
-const REQUIRED_HEADERS = ['src_email', 'src_password', 'src_host', 'dst_email', 'dst_password', 'dst_host'];
+const REQUIRED_HEADERS = ['src_email', 'src_password', 'dst_email', 'dst_password'];
 const MAX_ACCOUNTS = 50;
 
 export function parseCsvFile(filePath) {

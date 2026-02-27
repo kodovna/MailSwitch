@@ -92,7 +92,7 @@ export default function AccountDetailPage() {
           </div>
           <div>
             <p className="text-gray-500">Destination</p>
-            <p className="font-medium">{account.dst_email}</p>
+            <p className="font-medium">{account.dst_host}:{account.dst_port}</p>
           </div>
           <div>
             <p className="text-gray-500">Duration</p>

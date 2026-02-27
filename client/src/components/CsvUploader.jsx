@@ -42,7 +42,7 @@ export default function CsvUploader({ onUpload, loading }) {
               Drop your CSV file here or click to browse
             </p>
             <p className="mt-2 text-sm">
-              Format: src_email, src_password, src_host, src_port, dst_email, dst_password, dst_host, dst_port
+              Format: src_email, src_password, dst_email, dst_password
             </p>
           </>
         )}

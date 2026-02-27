@@ -1,0 +1,148 @@
+import { useState } from 'react';
+import { api } from '../lib/api';
+
+export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
+  const [srcHost, setSrcHost] = useState(initialConfig?.srcHost || '');
+  const [srcPort, setSrcPort] = useState(initialConfig?.srcPort || 993);
+  const [dstHost, setDstHost] = useState(initialConfig?.dstHost || '');
+  const [dstPort, setDstPort] = useState(initialConfig?.dstPort || 993);
+  const [testing, setTesting] = useState(false);
+  const [srcStatus, setSrcStatus] = useState(null); // null | 'loading' | 'success' | 'error'
+  const [dstStatus, setDstStatus] = useState(null);
+  const [srcError, setSrcError] = useState('');
+  const [dstError, setDstError] = useState('');
+
+  async function handleTest() {
+    setTesting(true);
+    setSrcStatus('loading');
+    setDstStatus('loading');
+    setSrcError('');
+    setDstError('');
+
+    const [srcResult, dstResult] = await Promise.all([
+      api.testConnection(srcHost, srcPort).catch((err) => ({ success: false, error: err.message })),
+      api.testConnection(dstHost, dstPort).catch((err) => ({ success: false, error: err.message })),
+    ]);
+
+    setSrcStatus(srcResult.success ? 'success' : 'error');
+    setDstStatus(dstResult.success ? 'success' : 'error');
+    setSrcError(srcResult.error || '');
+    setDstError(dstResult.error || '');
+    setTesting(false);
+  }
+
+  const canTest = srcHost.trim() && dstHost.trim();
+  const bothPassed = srcStatus === 'success' && dstStatus === 'success';
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-lg font-semibold mb-4">IMAP Server Configuration</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Source Server</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Host</label>
+              <input
+                type="text"
+                value={srcHost}
+                onChange={(e) => { setSrcHost(e.target.value); setSrcStatus(null); }}
+                placeholder="imap.source.com"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Port</label>
+              <input
+                type="number"
+                value={srcPort}
+                onChange={(e) => { setSrcPort(e.target.value); setSrcStatus(null); }}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            {srcStatus === 'success' && (
+              <p className="text-sm text-green-600 flex items-center gap-1">
+                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-green-100">&#10003;</span>
+                Connected successfully
+              </p>
+            )}
+            {srcStatus === 'error' && (
+              <p className="text-sm text-red-600 flex items-center gap-1">
+                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-red-100">&#10007;</span>
+                {srcError}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Destination Server</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Host</label>
+              <input
+                type="text"
+                value={dstHost}
+                onChange={(e) => { setDstHost(e.target.value); setDstStatus(null); }}
+                placeholder="imap.destination.com"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Port</label>
+              <input
+                type="number"
+                value={dstPort}
+                onChange={(e) => { setDstPort(e.target.value); setDstStatus(null); }}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            {dstStatus === 'success' && (
+              <p className="text-sm text-green-600 flex items-center gap-1">
+                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-green-100">&#10003;</span>
+                Connected successfully
+              </p>
+            )}
+            {dstStatus === 'error' && (
+              <p className="text-sm text-red-600 flex items-center gap-1">
+                <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-red-100">&#10007;</span>
+                {dstError}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {bothPassed && (
+        <div className="mt-6 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+          <span className="inline-block w-5 h-5 text-center leading-5 rounded-full bg-green-100 font-bold">&#10003;</span>
+          Both servers connected successfully
+        </div>
+      )}
+
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          onClick={handleTest}
+          disabled={!canTest || testing}
+          className={`px-6 py-2 rounded-md font-medium disabled:opacity-50 ${
+            bothPassed
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+          }`}
+        >
+          {testing ? 'Testing...' : bothPassed ? 'Re-test' : 'Test Connections'}
+        </button>
+
+        {bothPassed && (
+          <button
+            onClick={() => onConfigVerified({ srcHost, srcPort: Number(srcPort), dstHost, dstPort: Number(dstPort) })}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700"
+          >
+            Next
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
