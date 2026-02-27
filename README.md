@@ -1,13 +1,13 @@
 # MailSwitch
 
-Self-hosted bulk email migration tool that transfers up to 50 email accounts between IMAP servers. Single `docker-compose up` command to run, with a web UI for configuring servers, verifying accounts, and monitoring real-time migration progress.
+Self-hosted bulk email migration tool that transfers up to 500 email accounts between IMAP servers. Single `docker-compose up` command to run, with a web UI for configuring servers, verifying accounts, and monitoring real-time migration progress.
 
 ## Features
 
 - **Guided 3-step wizard** — Server Config → Upload CSV → Preview & Start
 - **IMAP connectivity test** — verify source/destination servers before uploading accounts
 - **Account authentication check** — validate all credentials before starting migration
-- Migrate up to 50 IMAP accounts in parallel (5 concurrent by default)
+- Migrate up to 500 IMAP accounts in parallel (10 concurrent by default)
 - Full migration, delta sync (incremental), and continuous sync modes
 - **Resync button** — catch up new emails after a completed one-time migration
 - Real-time progress tracking via Server-Sent Events
@@ -98,7 +98,7 @@ Docker Container (port 3000)
 │   ├── SSE endpoint (/api/events)
 │   └── Static file serving (React build)
 ├── Migration Engine
-│   ├── Async queue (max 5 concurrent accounts)
+│   ├── Async queue (max 10 concurrent accounts)
 │   └── Account Migrator (ImapFlow wrapper)
 └── SQLite Database (/data/mailswitch.db)
 ```
@@ -145,7 +145,7 @@ Environment variables (set in `docker-compose.yml`):
 |----------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `DB_PATH` | `/data/mailswitch.db` | SQLite database path |
-| `MAX_CONCURRENT` | `5` | Max parallel account migrations |
+| `MAX_CONCURRENT` | `10` | Max parallel account migrations |
 | `SYNC_INTERVAL` | `300` | Continuous sync interval in seconds |
 | `MAX_RETRIES` | `3` | Connection retry attempts |
 | `MESSAGE_RETRIES` | `2` | Per-message retry attempts |
