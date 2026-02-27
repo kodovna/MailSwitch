@@ -22,7 +22,7 @@ Self-hosted bulk email migration tool that transfers up to 500 email accounts be
 
 ```bash
 git clone git@github.com:syafi-dev/MailSwitch.git
-cd mailswitch
+cd MailSwitch
 docker-compose up -d
 ```
 
