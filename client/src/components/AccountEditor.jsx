@@ -316,10 +316,10 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-3 py-2 text-left font-medium text-gray-500 w-10">#</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500">Source Email</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500">Source Password</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500">Dest Email</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500">Dest Password</th>
+                <th className="px-2 py-2 text-left font-medium text-gray-500 w-[34%]">Source Email</th>
+                <th className="px-2 py-2 text-left font-medium text-gray-500 w-[12%]">Source Password</th>
+                <th className="px-2 py-2 text-left font-medium text-gray-500 w-[28%]">Dest Email</th>
+                <th className="px-2 py-2 text-left font-medium text-gray-500 w-[16%]">Dest Password</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-500 w-20"></th>
               </tr>
             </thead>
