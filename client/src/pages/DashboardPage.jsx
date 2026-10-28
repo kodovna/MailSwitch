@@ -14,6 +14,8 @@ export default function DashboardPage() {
   const { job, accounts, loading, error, refetch } = useMigrationState(id);
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
 
   async function runAction(fn) {
     setActionLoading(true);
@@ -26,6 +28,16 @@ export default function DashboardPage() {
       setActionLoading(false);
       setConfirmAction(null);
     }
+  }
+
+  async function handleRename() {
+    try {
+      await api.renameJob(job.id, nameDraft);
+      refetch();
+    } catch (err) {
+      alert(err.message);
+    }
+    setEditingName(false);
   }
 
   async function handleDelete() {
@@ -59,7 +71,39 @@ export default function DashboardPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Job #{job.id}</h1>
+          {editingName ? (
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleRename(); }}
+              className="flex items-center gap-2"
+            >
+              <input
+                autoFocus
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Escape' && setEditingName(false)}
+                maxLength={100}
+                placeholder={`Job #${job.id}`}
+                className="border border-gray-300 rounded-md px-3 py-1.5 text-lg font-bold w-80"
+              />
+              <button type="submit" className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+                Save
+              </button>
+              <button type="button" onClick={() => setEditingName(false)} className="text-sm text-gray-500 hover:underline">
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-2xl font-bold">{job.name || `Job #${job.id}`}</h1>
+              {job.name && <span className="text-sm text-gray-400">#{job.id}</span>}
+              <button
+                onClick={() => { setNameDraft(job.name || ''); setEditingName(true); }}
+                className="text-sm text-indigo-600 hover:underline"
+              >
+                Rename
+              </button>
+            </div>
+          )}
           {job.src_host && (
             <p className="text-sm text-gray-500 mt-1">
               {job.src_host}:{job.src_port}

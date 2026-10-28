@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS migration_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','running','paused','completed','cancelled','failed')),
+  name TEXT NOT NULL DEFAULT '',
   mode TEXT NOT NULL DEFAULT 'full' CHECK(mode IN ('full','continuous')),
   total_accounts INTEGER NOT NULL DEFAULT 0,
   completed_accounts INTEGER NOT NULL DEFAULT 0,
