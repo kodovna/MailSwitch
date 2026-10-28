@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useMigrationState } from '../hooks/useMigrationState';
 import OverallProgress from '../components/OverallProgress';
 import AccountTable from '../components/AccountTable';
@@ -10,6 +10,7 @@ import { api } from '../lib/api';
 
 export default function DashboardPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { job, accounts, loading, error, refetch } = useMigrationState(id);
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -22,6 +23,18 @@ export default function DashboardPage() {
     } catch {
       // errors shown via SSE
     } finally {
+      setActionLoading(false);
+      setConfirmAction(null);
+    }
+  }
+
+  async function handleDelete() {
+    setActionLoading(true);
+    try {
+      await api.deleteJob(job.id);
+      navigate('/jobs');
+    } catch (err) {
+      alert(err.message);
       setActionLoading(false);
       setConfirmAction(null);
     }
@@ -129,6 +142,14 @@ export default function DashboardPage() {
               Resync
             </button>
           )}
+
+          <button
+            onClick={() => setConfirmAction('delete')}
+            disabled={actionLoading}
+            className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
@@ -140,6 +161,14 @@ export default function DashboardPage() {
         title="Cancel Migration"
         message="Are you sure you want to cancel this migration? Running transfers will be stopped."
         onConfirm={() => runAction(() => api.cancelJob(job.id))}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmAction === 'delete'}
+        title="Delete Job"
+        message="The job, its accounts and error log will be permanently deleted. Already migrated mail stays in the destination."
+        onConfirm={handleDelete}
         onCancel={() => setConfirmAction(null)}
       />
     </div>
