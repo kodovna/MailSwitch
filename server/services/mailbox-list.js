@@ -35,7 +35,7 @@ function load() {
 
 export function listMailboxes() {
   return [...load()]
-    .map(([email, { usage }]) => ({ email, usage }))
+    .map(([email, { username, usage }]) => ({ email, username, usage }))
     .sort((a, b) => a.email.localeCompare(b.email));
 }
 

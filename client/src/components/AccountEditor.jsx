@@ -115,13 +115,25 @@ function AccountRow({ account, index, mailboxes, mailboxList, usage, onChange, o
     <tr className="group">
       <td className="px-3 py-2 text-gray-400 text-sm">{index + 1}</td>
       <td className="px-2 py-1.5">
-        <SuggestInput
-          value={account.src_email}
-          suggestions={mailboxList}
-          onChange={handleSourceChange}
-          placeholder="source@example.com"
-          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-        />
+        <div className="relative">
+          <SuggestInput
+            value={account.src_email}
+            suggestions={mailboxList}
+            onChange={handleSourceChange}
+            placeholder="source@example.com"
+            className={`w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${
+              usage != null ? 'pr-20' : ''
+            }`}
+          />
+          {usage != null && (
+            <span
+              title="Source mailbox size from the CSV"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 tabular-nums pointer-events-none"
+            >
+              {formatBytes(usage * 1024)}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-2 py-1.5">
         <input
@@ -133,25 +145,13 @@ function AccountRow({ account, index, mailboxes, mailboxList, usage, onChange, o
         />
       </td>
       <td className="px-2 py-1.5">
-        <div className="relative">
-          <input
-            type="email"
-            value={account.dst_email}
-            onChange={(e) => handleChange('dst_email', e.target.value)}
-            placeholder="dest@example.com"
-            className={`w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${
-              usage != null ? 'pr-20' : ''
-            }`}
-          />
-          {usage != null && (
-            <span
-              title="Mailbox size from the CSV"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 tabular-nums pointer-events-none"
-            >
-              {formatBytes(usage * 1024)}
-            </span>
-          )}
-        </div>
+        <input
+          type="email"
+          value={account.dst_email}
+          onChange={(e) => handleChange('dst_email', e.target.value)}
+          placeholder="dest@example.com"
+          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+        />
       </td>
       <td className="px-2 py-1.5">
         <input
@@ -208,9 +208,15 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
 
   const mailboxSet = new Set(mailboxes.map((m) => m.email));
 
-  // Sizes (KB) from the CSV, looked up by destination address; unknown for anything not in it
-  const usageByEmail = new Map(mailboxes.filter((m) => m.usage != null).map((m) => [m.email, m.usage]));
-  const usageOf = (acct) => usageByEmail.get(String(acct.dst_email || '').trim().toLowerCase());
+  // Source mailbox sizes (KB) from the CSV, looked up by the source login or the address;
+  // unknown for anything not in it
+  const usageBySource = new Map();
+  for (const m of mailboxes) {
+    if (m.usage == null) continue;
+    usageBySource.set(m.email, m.usage);
+    if (m.username) usageBySource.set(m.username.toLowerCase(), m.usage);
+  }
+  const usageOf = (acct) => usageBySource.get(String(acct.src_email || '').trim().toLowerCase());
   const known = accounts.map(usageOf).filter((u) => u != null);
   const totalKb = known.reduce((sum, u) => sum + u, 0);
 
