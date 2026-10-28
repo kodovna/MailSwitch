@@ -5,7 +5,7 @@ import { logger } from '../utils/logger.js';
 
 let cache = { path: null, mtimeMs: 0, entries: new Map() };
 
-// CSV columns: email, username, password. A header row is skipped (first cell has no "@").
+// CSV columns: email, username, password, usage (bytes, optional). A header row is skipped (first cell has no "@").
 function load() {
   const path = config.mailboxCsvPath;
   if (!path) return new Map();
@@ -22,6 +22,7 @@ function load() {
       entries.set(email, {
         username: String(row[1] || '').trim(),
         password: String(row[2] || ''),
+        usage: Number.isFinite(Number(row[3])) && String(row[3] || '').trim() !== '' ? Number(row[3]) : null,
       });
     }
     cache = { path, mtimeMs, entries };
@@ -33,7 +34,9 @@ function load() {
 }
 
 export function listMailboxes() {
-  return [...load().keys()].sort();
+  return [...load()]
+    .map(([email, { usage }]) => ({ email, usage }))
+    .sort((a, b) => a.email.localeCompare(b.email));
 }
 
 // Builds a prefilled account: source logs in as the CSV username with the CSV password,
