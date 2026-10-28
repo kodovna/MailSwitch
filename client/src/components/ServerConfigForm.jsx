@@ -49,10 +49,10 @@ function StatusMessage({ status, error }) {
 }
 
 export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
-  const [srcHost, setSrcHost] = useState(initialConfig?.srcHost || '');
+  const [srcHost, setSrcHost] = useState(initialConfig?.srcHost || 'mail.compsys.cz');
   const [srcPort, setSrcPort] = useState(initialConfig?.srcPort || 993);
   const [srcSecurity, setSrcSecurity] = useState(initialConfig?.srcSecurity || 'ssl');
-  const [dstHost, setDstHost] = useState(initialConfig?.dstHost || '');
+  const [dstHost, setDstHost] = useState(initialConfig?.dstHost || 'mail.webglobe.cz');
   const [dstPort, setDstPort] = useState(initialConfig?.dstPort || 993);
   const [dstSecurity, setDstSecurity] = useState(initialConfig?.dstSecurity || 'ssl');
   const [testing, setTesting] = useState(false);
