@@ -74,6 +74,10 @@ export const api = {
     return request(`/mailboxes/account?email=${encodeURIComponent(email)}`);
   },
 
+  getMailboxDomain(domain) {
+    return request(`/mailboxes/domain?domain=${encodeURIComponent(domain)}`);
+  },
+
   getJobs() {
     return request('/jobs');
   },

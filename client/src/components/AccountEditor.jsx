@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatBytes } from '../lib/format';
 
+const MAX_ACCOUNTS = 500;
 const EMPTY_ACCOUNT = { src_email: '', src_password: '', dst_email: '', dst_password: '' };
 
 // Email input with a suggestion list wider than the field (a native datalist is
@@ -201,12 +202,27 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
   const inputRef = useRef();
   const [dragOver, setDragOver] = useState(false);
   const [mailboxes, setMailboxes] = useState([]);
+  const [domainOpen, setDomainOpen] = useState(false);
+  const [domain, setDomain] = useState('');
+  const [domainPassword, setDomainPassword] = useState('');
+  const [domainMessage, setDomainMessage] = useState(null);
+  const [domainLoading, setDomainLoading] = useState(false);
 
   useEffect(() => {
     api.getMailboxes().then((d) => setMailboxes(d.mailboxes)).catch(() => {});
   }, []);
 
   const mailboxSet = new Set(mailboxes.map((m) => m.email));
+
+  // Domains of the CSV mailboxes with their mailbox count and total size (KB)
+  const domains = new Map();
+  for (const m of mailboxes) {
+    const domain = m.email.slice(m.email.indexOf('@') + 1);
+    const d = domains.get(domain) || { count: 0, usage: 0 };
+    d.count += 1;
+    d.usage += m.usage || 0;
+    domains.set(domain, d);
+  }
 
   // Source mailbox sizes (KB) from the CSV, looked up by the source login or the address;
   // unknown for anything not in it
@@ -247,6 +263,36 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
 
   function handleAdd() {
     onChange([...accounts, { ...EMPTY_ACCOUNT }]);
+  }
+
+  async function handleAddDomain() {
+    if (!domain) return;
+    setDomainLoading(true);
+    setDomainMessage(null);
+    try {
+      const { accounts: fetched } = await api.getMailboxDomain(domain);
+      // Drop untouched blank rows and skip mailboxes that are already in the table
+      const current = accounts.filter((a) => a.src_email || a.dst_email);
+      const present = new Set(current.map((a) => a.dst_email.trim().toLowerCase()));
+      const toAdd = fetched
+        .filter((a) => !present.has(a.dst_email))
+        .map((a) => ({ ...a, dst_password: domainPassword }));
+
+      if (current.length + toAdd.length > MAX_ACCOUNTS) {
+        setDomainMessage({ error: true, text: `Too many accounts: ${current.length + toAdd.length} (maximum is ${MAX_ACCOUNTS} per job).` });
+        return;
+      }
+      onChange([...current, ...toAdd]);
+      const skipped = fetched.length - toAdd.length;
+      setDomainMessage({
+        text: `Added ${toAdd.length} mailbox${toAdd.length !== 1 ? 'es' : ''} from ${domain}` +
+          (skipped > 0 ? `, ${skipped} already in the table.` : '.'),
+      });
+    } catch (err) {
+      setDomainMessage({ error: true, text: err.message });
+    } finally {
+      setDomainLoading(false);
+    }
   }
 
   return (
@@ -330,16 +376,73 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
       )}
 
       {/* Add account button */}
+      <div className="mt-3 flex items-center gap-6">
       <button
         type="button"
         onClick={handleAdd}
-        className="mt-3 flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
         Add Account Manually
       </button>
+      {domains.size > 0 && (
+        <button
+          type="button"
+          onClick={() => setDomainOpen(!domainOpen)}
+          className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Domain
+        </button>
+      )}
+      </div>
+
+      {domainOpen && domains.size > 0 && (
+        <div className="mt-3 p-4 border border-gray-200 rounded-lg bg-white flex flex-wrap items-end gap-4">
+          <label className="text-sm text-gray-600">
+            <span className="block mb-1">Domain</span>
+            <select
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              className="border border-gray-200 rounded px-2 py-1.5 text-sm min-w-[18rem] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="">Select a domain...</option>
+              {[...domains].sort(([a], [b]) => a.localeCompare(b)).map(([name, d]) => (
+                <option key={name} value={name}>
+                  {name} ({d.count} mailbox{d.count !== 1 ? 'es' : ''}{d.usage > 0 ? `, ${formatBytes(d.usage * 1024)}` : ''})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-gray-600">
+            <span className="block mb-1">Dest password for all (optional)</span>
+            <input
+              type="password"
+              value={domainPassword}
+              onChange={(e) => setDomainPassword(e.target.value)}
+              autoComplete="new-password"
+              className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleAddDomain}
+            disabled={!domain || domainLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {domainLoading ? 'Adding...' : 'Add mailboxes'}
+          </button>
+          {domainMessage && (
+            <p className={`w-full text-sm ${domainMessage.error ? 'text-red-600' : 'text-green-700'}`}>
+              {domainMessage.text}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
