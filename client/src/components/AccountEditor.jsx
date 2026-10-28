@@ -83,7 +83,7 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
             >
               <span>{m.email}</span>
               {m.usage != null && (
-                <span className="ml-6 text-xs text-gray-400 tabular-nums">{formatBytes(m.usage)}</span>
+                <span className="ml-6 text-xs text-gray-400 tabular-nums">{formatBytes(m.usage * 1024)}</span>
               )}
             </li>
           ))}
