@@ -15,7 +15,7 @@ function AccountRow({ account, index, mailboxes, onChange, onRemove }) {
     handleChange('src_email', value);
     if (!mailboxes.has(value.trim().toLowerCase())) return;
     try {
-      onChange(index, await api.getMailboxAccount(value.trim()));
+      onChange(index, { ...(await api.getMailboxAccount(value.trim())), dst_password: account.dst_password });
     } catch {
       // keep what was typed
     }

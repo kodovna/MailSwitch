@@ -152,7 +152,7 @@ Environment variables (set in `docker-compose.yml`):
 | `LOG_LEVEL` | `info` | Log level (error, warn, info, debug) |
 | `MAILBOX_CSV_PATH` | _(empty)_ | CSV with columns `email, username, password` (header optional). Its addresses are suggested in the source e-mail field of step 2 |
 
-Picking an address from the suggestions fills the row: source = `username` from the CSV, destination = the address, both with `password` from the CSV.
+Picking an address from the suggestions fills the row: source = `username` and `password` from the CSV, destination = the address. The destination password is entered manually.
 
 ## Data Persistence
 

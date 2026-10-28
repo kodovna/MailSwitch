@@ -36,8 +36,9 @@ export function listMailboxes() {
   return [...load().keys()].sort();
 }
 
-// Builds a prefilled account: source logs in as the CSV username, destination is the
-// address itself; both use the password from the CSV.
+// Builds a prefilled account: source logs in as the CSV username with the CSV password,
+// destination is the address itself. The destination password is not known in advance
+// (the mailbox may not exist yet), so it is left for the user to fill in.
 export function buildAccount(email) {
   const key = String(email || '').trim().toLowerCase();
   const entry = load().get(key);
@@ -46,6 +47,6 @@ export function buildAccount(email) {
     src_email: entry.username,
     src_password: entry.password,
     dst_email: key,
-    dst_password: entry.password,
+    dst_password: '',
   };
 }
