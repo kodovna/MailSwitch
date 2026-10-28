@@ -106,15 +106,20 @@ class MigrationEngine {
       }
     }
 
+    if (!queue) {
+      // Nothing is running in memory (e.g. server restarted while paused): start over
+      // from the DB state. startJob refuses a job that is already 'running'.
+      accountQueries.resetStale(jobId);
+      jobQueries.updateStatus(jobId, 'pending');
+      this.startJob(jobId).catch((err) => {
+        logger.error(`Failed to restart job ${jobId}`, { error: err.message });
+      });
+      return;
+    }
+
     jobQueries.updateStatus(jobId, 'running');
     eventBus.emitJobUpdate(jobId, { status: 'running' });
-
-    if (queue) {
-      queue.resume();
-    } else {
-      // Queue was cleared, restart
-      this.startJob(jobId);
-    }
+    queue.resume();
   }
 
   cancelJob(jobId) {
