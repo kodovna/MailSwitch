@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../lib/api';
+import { formatBytes } from '../lib/format';
 
 const EMPTY_ACCOUNT = { src_email: '', src_password: '', dst_email: '', dst_password: '' };
 
@@ -15,7 +16,7 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
 
   const query = value.trim().toLowerCase();
   const matches = query
-    ? suggestions.filter((m) => m.includes(query) && m !== query).slice(0, MAX_SUGGESTIONS)
+    ? suggestions.filter((m) => m.email.includes(query) && m.email !== query).slice(0, MAX_SUGGESTIONS)
     : [];
   const visible = open && matches.length > 0;
 
@@ -28,7 +29,7 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
 
   function pick(m) {
     setOpen(false);
-    onChange(m);
+    onChange(m.email);
   }
 
   function handleKeyDown(e) {
@@ -67,15 +68,18 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
         >
           {matches.map((m, i) => (
             <li
-              key={m}
+              key={m.email}
               // mousedown fires before the input's blur closes the list
               onMouseDown={(e) => { e.preventDefault(); pick(m); }}
               onMouseEnter={() => setActive(i)}
-              className={`px-3 py-1.5 text-sm whitespace-nowrap cursor-pointer ${
+              className={`flex items-baseline justify-between px-3 py-1.5 text-sm whitespace-nowrap cursor-pointer ${
                 i === active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
               }`}
             >
-              {m}
+              <span>{m.email}</span>
+              {m.usage != null && (
+                <span className="ml-6 text-xs text-gray-400 tabular-nums">{formatBytes(m.usage)}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -185,7 +189,7 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
     api.getMailboxes().then((d) => setMailboxes(d.mailboxes)).catch(() => {});
   }, []);
 
-  const mailboxSet = new Set(mailboxes);
+  const mailboxSet = new Set(mailboxes.map((m) => m.email));
 
   function handleFileUpload(file) {
     if (file) onUploadCsv(file);
