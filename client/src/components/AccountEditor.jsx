@@ -145,13 +145,25 @@ function AccountRow({ account, index, mailboxes, mailboxList, usage, onChange, o
         />
       </td>
       <td className="px-2 py-1.5">
-        <input
-          type="email"
-          value={account.dst_email}
-          onChange={(e) => handleChange('dst_email', e.target.value)}
-          placeholder="dest@example.com"
-          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-        />
+        <div className="relative">
+          <input
+            type="email"
+            value={account.dst_email}
+            onChange={(e) => handleChange('dst_email', e.target.value)}
+            placeholder="dest@example.com"
+            className={`w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${
+              usage != null ? 'pr-20' : ''
+            }`}
+          />
+          {usage != null && (
+            <span
+              title="Mailbox size from the CSV"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 tabular-nums pointer-events-none"
+            >
+              {formatBytes(usage * 1024)}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-2 py-1.5">
         <input
