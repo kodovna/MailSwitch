@@ -18,6 +18,7 @@ import setupRouter from './routes/setup.js';
 import uploadRouter from './routes/upload.js';
 import jobsRouter from './routes/jobs.js';
 import accountsRouter from './routes/accounts.js';
+import mailboxesRouter from './routes/mailboxes.js';
 import eventsRouter from './routes/events.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -95,6 +96,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/upload', requireAuth, uploadRouter);
 app.use('/api/jobs', requireAuth, jobsRouter);
 app.use('/api/accounts', requireAuth, accountsRouter);
+app.use('/api/mailboxes', requireAuth, mailboxesRouter);
 app.use('/api/events', requireAuthSSE, eventsRouter);
 
 // Serve static frontend files

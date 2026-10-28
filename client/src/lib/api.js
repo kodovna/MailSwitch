@@ -66,6 +66,14 @@ export const api = {
     });
   },
 
+  getMailboxes() {
+    return request('/mailboxes');
+  },
+
+  getMailboxAccount(email) {
+    return request(`/mailboxes/account?email=${encodeURIComponent(email)}`);
+  },
+
   getJobs() {
     return request('/jobs');
   },
