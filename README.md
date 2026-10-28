@@ -151,10 +151,8 @@ Environment variables (set in `docker-compose.yml`):
 | `MESSAGE_RETRIES` | `2` | Per-message retry attempts |
 | `LOG_LEVEL` | `info` | Log level (error, warn, info, debug) |
 | `MAILBOX_CSV_PATH` | _(empty)_ | CSV with columns `email, username, password` (header optional). Its addresses are suggested in the source e-mail field of step 2 |
-| `MIGRATE_SUFFIX` | `-migrate` | Suffix added to a picked address to form the source login (`user@example.cz-migrate`) |
-| `MAILBOX_MIGRATE_PASSWORD` | _(empty)_ | Shared password of the `-migrate` source accounts |
 
-Picking an address from the suggestions fills the row: source = `<email><MIGRATE_SUFFIX>` with `MAILBOX_MIGRATE_PASSWORD`, destination = `username` and `password` from the CSV (the address itself if `username` is empty).
+Picking an address from the suggestions fills the row: source = `username` and `password` from the CSV, destination = the address. The destination password is entered manually.
 
 ## Data Persistence
 
