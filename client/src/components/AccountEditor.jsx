@@ -3,7 +3,88 @@ import { api } from '../lib/api';
 
 const EMPTY_ACCOUNT = { src_email: '', src_password: '', dst_email: '', dst_password: '' };
 
-function AccountRow({ account, index, mailboxes, onChange, onRemove }) {
+const MAX_SUGGESTIONS = 8;
+
+// Email input with a suggestion list wider than the field (a native datalist is
+// limited to the input width and cuts long addresses off).
+function SuggestInput({ value, suggestions, onChange, placeholder, className }) {
+  const inputRef = useRef();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const query = value.trim().toLowerCase();
+  const matches = query
+    ? suggestions.filter((m) => m.includes(query) && m !== query).slice(0, MAX_SUGGESTIONS)
+    : [];
+  const visible = open && matches.length > 0;
+
+  function show() {
+    const rect = inputRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left });
+    setActive(0);
+    setOpen(true);
+  }
+
+  function pick(m) {
+    setOpen(false);
+    onChange(m);
+  }
+
+  function handleKeyDown(e) {
+    if (!visible) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive((a) => (a + 1) % matches.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive((a) => (a - 1 + matches.length) % matches.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      pick(matches[active]);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="email"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); show(); }}
+        onKeyDown={handleKeyDown}
+        onBlur={() => setOpen(false)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className={className}
+      />
+      {visible && (
+        <ul
+          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-50 min-w-[24rem] max-h-72 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-1"
+        >
+          {matches.map((m, i) => (
+            <li
+              key={m}
+              // mousedown fires before the input's blur closes the list
+              onMouseDown={(e) => { e.preventDefault(); pick(m); }}
+              onMouseEnter={() => setActive(i)}
+              className={`px-3 py-1.5 text-sm whitespace-nowrap cursor-pointer ${
+                i === active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
+              }`}
+            >
+              {m}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function AccountRow({ account, index, mailboxes, mailboxList, onChange, onRemove }) {
   const [showPasswords, setShowPasswords] = useState(false);
 
   function handleChange(field, value) {
@@ -25,11 +106,10 @@ function AccountRow({ account, index, mailboxes, onChange, onRemove }) {
     <tr className="group">
       <td className="px-3 py-2 text-gray-400 text-sm">{index + 1}</td>
       <td className="px-2 py-1.5">
-        <input
-          type="email"
+        <SuggestInput
           value={account.src_email}
-          onChange={(e) => handleSourceChange(e.target.value)}
-          list="mailbox-suggestions"
+          suggestions={mailboxList}
+          onChange={handleSourceChange}
           placeholder="source@example.com"
           className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
         />
@@ -199,6 +279,7 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
                   account={acct}
                   index={i}
                   mailboxes={mailboxSet}
+                  mailboxList={mailboxes}
                   onChange={handleAccountChange}
                   onRemove={handleRemove}
                 />
@@ -207,10 +288,6 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
           </table>
         </div>
       )}
-
-      <datalist id="mailbox-suggestions">
-        {mailboxes.map((m) => <option key={m} value={m} />)}
-      </datalist>
 
       {/* Add account button */}
       <button
