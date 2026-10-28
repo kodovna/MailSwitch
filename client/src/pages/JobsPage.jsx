@@ -3,14 +3,27 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatDate, formatDuration, percent } from '../lib/format';
 import StatusBadge from '../components/StatusBadge';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toDelete, setToDelete] = useState(null);
 
   useEffect(() => {
     api.getJobs().then(setJobs).finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async () => {
+    const id = toDelete;
+    setToDelete(null);
+    try {
+      await api.deleteJob(id);
+      setJobs((prev) => prev.filter((j) => j.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   if (loading) return <p className="text-gray-500">Loading...</p>;
 
@@ -93,8 +106,13 @@ export default function JobsPage() {
                     </div>
                   </div>
 
-                  {/* Arrow indicator */}
-                  <div className="flex items-center px-4 text-gray-300">
+                  <div className="flex items-center gap-3 px-4 text-gray-300">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToDelete(job.id); }}
+                      className="text-xs text-gray-400 hover:text-red-600"
+                    >
+                      Delete
+                    </button>
                     &rsaquo;
                   </div>
                 </div>
@@ -103,6 +121,13 @@ export default function JobsPage() {
           })}
         </div>
       )}
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Delete job?"
+        message="The job, its accounts and error log will be permanently deleted. Already migrated mail stays in the destination."
+        onConfirm={handleDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
