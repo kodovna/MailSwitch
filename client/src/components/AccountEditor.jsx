@@ -4,8 +4,6 @@ import { formatBytes } from '../lib/format';
 
 const EMPTY_ACCOUNT = { src_email: '', src_password: '', dst_email: '', dst_password: '' };
 
-const MAX_SUGGESTIONS = 8;
-
 // Email input with a suggestion list wider than the field (a native datalist is
 // limited to the input width and cuts long addresses off).
 function SuggestInput({ value, suggestions, onChange, placeholder, className }) {
@@ -13,12 +11,18 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const listRef = useRef();
 
   const query = value.trim().toLowerCase();
   const matches = query
-    ? suggestions.filter((m) => m.email.includes(query) && m.email !== query).slice(0, MAX_SUGGESTIONS)
+    ? suggestions.filter((m) => m.email.includes(query) && m.email !== query)
     : [];
   const visible = open && matches.length > 0;
+
+  // Keep the highlighted entry in view while moving with the arrow keys
+  useEffect(() => {
+    listRef.current?.children[active]?.scrollIntoView({ block: 'nearest' });
+  }, [active]);
 
   function show() {
     const rect = inputRef.current.getBoundingClientRect();
@@ -63,6 +67,7 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
       />
       {visible && (
         <ul
+          ref={listRef}
           style={{ top: pos.top, left: pos.left }}
           className="fixed z-50 min-w-[24rem] max-h-72 overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-1"
         >
