@@ -18,6 +18,12 @@ export function initDatabase() {
   const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
   db.exec(schema);
 
+  // Databases created before job names existed
+  const jobColumns = db.prepare('PRAGMA table_info(migration_jobs)').all().map((c) => c.name);
+  if (!jobColumns.includes('name')) {
+    db.exec("ALTER TABLE migration_jobs ADD COLUMN name TEXT NOT NULL DEFAULT ''");
+  }
+
   logger.info(`Database initialized at ${config.dbPath}`);
   return db;
 }
@@ -29,15 +35,19 @@ export function getDb() {
 
 // Job helpers
 export const jobQueries = {
-  create(mode, totalAccounts, syncInterval = 300, { srcHost = '', srcPort = 993, srcSecurity = 'ssl', dstHost = '', dstPort = 993, dstSecurity = 'ssl' } = {}) {
+  create(mode, totalAccounts, syncInterval = 300, { name = '', srcHost = '', srcPort = 993, srcSecurity = 'ssl', dstHost = '', dstPort = 993, dstSecurity = 'ssl' } = {}) {
     const stmt = getDb().prepare(
-      `INSERT INTO migration_jobs (mode, total_accounts, sync_interval, src_host, src_port, src_security, dst_host, dst_port, dst_security) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO migration_jobs (name, mode, total_accounts, sync_interval, src_host, src_port, src_security, dst_host, dst_port, dst_security) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
-    return stmt.run(mode, totalAccounts, syncInterval, srcHost, srcPort, srcSecurity, dstHost, dstPort, dstSecurity);
+    return stmt.run(name, mode, totalAccounts, syncInterval, srcHost, srcPort, srcSecurity, dstHost, dstPort, dstSecurity);
   },
 
   getById(id) {
     return getDb().prepare('SELECT * FROM migration_jobs WHERE id = ?').get(id);
+  },
+
+  updateName(id, name) {
+    getDb().prepare("UPDATE migration_jobs SET name = ?, updated_at = datetime('now') WHERE id = ?").run(name, id);
   },
 
   updateStatus(id, status) {

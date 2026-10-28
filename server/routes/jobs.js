@@ -6,6 +6,9 @@ import { validateServerConfig } from '../utils/validators.js';
 
 const router = Router();
 
+const MAX_NAME_LENGTH = 100;
+const cleanName = (value) => String(value ?? '').trim().slice(0, MAX_NAME_LENGTH);
+
 // Test IMAP server connectivity
 router.post('/test-connection', async (req, res) => {
   const { host, port = 993, security = 'ssl' } = req.body;
@@ -33,7 +36,7 @@ router.post('/test-auth', async (req, res) => {
 
 // Create a new migration job
 router.post('/', (req, res) => {
-  const { accounts, mode = 'full', syncInterval = 60, serverConfig = {} } = req.body;
+  const { accounts, name, mode = 'full', syncInterval = 60, serverConfig = {} } = req.body;
 
   if (!accounts || !Array.isArray(accounts) || accounts.length === 0) {
     return res.status(400).json({ error: 'No accounts provided' });
@@ -63,7 +66,7 @@ router.post('/', (req, res) => {
   }
 
   const result = jobQueries.create(mode, accounts.length, clampedInterval, {
-    srcHost, srcPort: Number(srcPort), srcSecurity, dstHost, dstPort: Number(dstPort), dstSecurity,
+    name: cleanName(name), srcHost, srcPort: Number(srcPort), srcSecurity, dstHost, dstPort: Number(dstPort), dstSecurity,
   });
   const jobId = result.lastInsertRowid;
 
@@ -71,6 +74,15 @@ router.post('/', (req, res) => {
 
   const job = jobQueries.getById(jobId);
   res.status(201).json(job);
+});
+
+// Rename a job
+router.patch('/:id', (req, res) => {
+  const job = jobQueries.getById(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+  jobQueries.updateName(job.id, cleanName(req.body.name));
+  res.json(jobQueries.getById(job.id));
 });
 
 // Get all jobs

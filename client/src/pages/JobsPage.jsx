@@ -69,7 +69,8 @@ export default function JobsPage() {
                       <span className="text-xs text-gray-400">{formatDate(job.created_at)}</span>
                     </div>
 
-                    <p className="text-sm text-gray-700 font-medium mb-3">
+                    {job.name && <p className="text-base font-semibold text-gray-900 mb-1">{job.name}</p>}
+                    <p className={`text-sm font-medium mb-3 ${job.name ? 'text-gray-500' : 'text-gray-700'}`}>
                       {job.src_host}:{job.src_port} &rarr; {job.dst_host}:{job.dst_port}
                     </p>
 

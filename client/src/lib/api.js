@@ -59,11 +59,15 @@ export const api = {
     });
   },
 
-  createJob(accounts, mode = 'full', syncInterval = 60, serverConfig = {}) {
+  createJob(accounts, mode = 'full', syncInterval = 60, serverConfig = {}, name = '') {
     return request('/jobs', {
       method: 'POST',
-      body: JSON.stringify({ accounts, mode, syncInterval, serverConfig }),
+      body: JSON.stringify({ accounts, name, mode, syncInterval, serverConfig }),
     });
+  },
+
+  renameJob(id, name) {
+    return request(`/jobs/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
   },
 
   getMailboxes() {

@@ -20,6 +20,7 @@ export default function UploadPage() {
   const [accounts, setAccounts] = useState(null);
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState('full');
+  const [jobName, setJobName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
@@ -133,7 +134,7 @@ export default function UploadPage() {
     setStarting(true);
     setError(null);
     try {
-      const job = await api.createJob(accounts, mode, 60, serverConfig);
+      const job = await api.createJob(accounts, mode, 60, serverConfig, jobName);
       await api.startJob(job.id);
       navigate(`/jobs/${job.id}`);
     } catch (err) {
@@ -294,6 +295,18 @@ export default function UploadPage() {
             {verified && (
               <>
                 <div className="h-6 w-px bg-gray-300" />
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Name:</label>
+                  <input
+                    type="text"
+                    value={jobName}
+                    onChange={(e) => setJobName(e.target.value)}
+                    maxLength={100}
+                    placeholder="optional"
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm w-48"
+                  />
+                </div>
 
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">Mode:</label>
