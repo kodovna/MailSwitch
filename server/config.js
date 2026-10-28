@@ -23,8 +23,6 @@ export const config = {
 
   // Mailbox suggestions for the "new migration" form (CSV: email, username, password; no header needed)
   mailboxCsvPath: process.env.MAILBOX_CSV_PATH || '',
-  // Shared password of the source accounts (the "username" column of the CSV)
-  migratePassword: process.env.MAILBOX_MIGRATE_PASSWORD || '',
 
   // TLS
   allowSelfSignedCerts: process.env.ALLOW_SELF_SIGNED_CERTS === 'true',

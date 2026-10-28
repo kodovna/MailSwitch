@@ -36,15 +36,15 @@ export function listMailboxes() {
   return [...load().keys()].sort();
 }
 
-// Builds a prefilled account: source logs in as the CSV username with the shared password,
-// destination is the address itself with the password from the CSV.
+// Builds a prefilled account: source logs in as the CSV username, destination is the
+// address itself; both use the password from the CSV.
 export function buildAccount(email) {
   const key = String(email || '').trim().toLowerCase();
   const entry = load().get(key);
   if (!entry) return null;
   return {
     src_email: entry.username,
-    src_password: config.migratePassword,
+    src_password: entry.password,
     dst_email: key,
     dst_password: entry.password,
   };
