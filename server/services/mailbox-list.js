@@ -53,3 +53,10 @@ export function buildAccount(email) {
     dst_password: '',
   };
 }
+
+// Prefilled accounts for every mailbox of a domain
+export function buildDomainAccounts(domain) {
+  const suffix = `@${String(domain || '').trim().toLowerCase()}`;
+  if (suffix === '@') return [];
+  return [...load().keys()].filter((email) => email.endsWith(suffix)).sort().map(buildAccount);
+}
