@@ -173,7 +173,7 @@ export class ImapClient {
       internalDate: true,
       source: true,
       ...options,
-    })) {
+    }, { uid: true })) {
       messages.push({
         uid: Number(msg.uid),
         flags: msg.flags ? [...msg.flags] : [],
