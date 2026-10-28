@@ -189,6 +189,13 @@ export const accountQueries = {
     ).run(id);
   },
 
+  // Accounts left 'running'/'paused' with no live migrator (e.g. after a server restart)
+  resetStale(jobId) {
+    getDb().prepare(
+      "UPDATE accounts SET status = 'pending', updated_at = datetime('now') WHERE job_id = ? AND status IN ('running', 'paused')"
+    ).run(jobId);
+  },
+
   resetCompleted(jobId) {
     getDb().prepare(
       "UPDATE accounts SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE job_id = ? AND status = 'completed'"
