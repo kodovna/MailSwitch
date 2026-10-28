@@ -25,7 +25,7 @@ export const config = {
   mailboxCsvPath: process.env.MAILBOX_CSV_PATH || '',
   // Source accounts are read through "<email><suffix>" duplicates sharing one password
   migrateSuffix: process.env.MIGRATE_SUFFIX || '-migrate',
-  migratePassword: process.env.MIGRATE_PASSWORD || '',
+  migratePassword: process.env.MAILBOX_MIGRATE_PASSWORD || '',
 
   // TLS
   allowSelfSignedCerts: process.env.ALLOW_SELF_SIGNED_CERTS === 'true',
