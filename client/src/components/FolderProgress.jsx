@@ -1,5 +1,6 @@
 import { percent } from '../lib/format';
 import StatusBadge from './StatusBadge';
+import Icon from './Icon';
 
 export default function FolderProgress({ folders }) {
   if (!folders || folders.length === 0) {
@@ -23,7 +24,12 @@ export default function FolderProgress({ folders }) {
             const pct = percent(f.migrated_messages, f.total_messages);
             return (
               <tr key={f.id}>
-                <td className="px-4 py-2 font-mono text-xs">{f.folder_path}</td>
+                <td className="px-4 py-2 font-mono text-xs">
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="folder" className="w-3.5 h-3.5 text-gray-400" />
+                    {f.folder_path}
+                  </span>
+                </td>
                 <td className="px-4 py-2"><StatusBadge status={f.status} /></td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-2">

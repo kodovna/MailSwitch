@@ -4,13 +4,14 @@ import ServerConfigForm from '../components/ServerConfigForm';
 import AccountEditor from '../components/AccountEditor';
 import CsvPreview from '../components/CsvPreview';
 import { api } from '../lib/api';
+import Icon from '../components/Icon';
 
 const SEC_LABEL = { ssl: 'SSL', starttls: 'STARTTLS', none: 'Plain' };
 
 const STEPS = [
-  { label: 'Server Config', desc: 'Connect to IMAP servers' },
-  { label: 'Accounts', desc: 'Upload CSV or add manually' },
-  { label: 'Verify & Start', desc: 'Check accounts and migrate' },
+  { label: 'Server Config', icon: 'server', desc: 'Connect to IMAP servers' },
+  { label: 'Accounts', icon: 'users', desc: 'Upload CSV or add manually' },
+  { label: 'Verify & Start', icon: 'shield', desc: 'Check accounts and migrate' },
 ];
 
 export default function UploadPage() {
@@ -165,7 +166,7 @@ export default function UploadPage() {
                       ? 'bg-indigo-600 border-indigo-600 text-white'
                       : 'bg-white border-gray-300 text-gray-400'
                 }`}>
-                  {i < step ? '\u2713' : i + 1}
+                  <Icon name={i < step ? 'check' : s.icon} className="w-4 h-4" />
                 </div>
                 <div className="hidden sm:block">
                   <p className={`text-sm font-medium ${i <= step ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -185,7 +186,8 @@ export default function UploadPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
+          <Icon name="exclamation-triangle" className="w-5 h-5 shrink-0" />
           {error}
         </div>
       )}
@@ -200,14 +202,15 @@ export default function UploadPage() {
         <div>
           <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm text-indigo-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-200 text-indigo-700 text-xs font-bold">1</span>
+              <Icon name="server" className="w-5 h-5" />
               <span className="font-medium">Servers:</span>
               {serverConfig.srcHost}:{serverConfig.srcPort} ({SEC_LABEL[serverConfig.srcSecurity]}) &rarr; {serverConfig.dstHost}:{serverConfig.dstPort} ({SEC_LABEL[serverConfig.dstSecurity]})
             </div>
             <button
               onClick={() => setStep(0)}
-              className="text-indigo-600 hover:underline text-sm font-medium"
+              className="inline-flex items-center gap-1 text-indigo-600 hover:underline text-sm font-medium"
             >
+              <Icon name="pencil" className="w-3.5 h-3.5" />
               Edit
             </button>
           </div>
@@ -222,15 +225,17 @@ export default function UploadPage() {
           <div className="mt-6 flex items-center gap-3">
             <button
               onClick={() => setStep(0)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
-              &larr; Back
+              <Icon name="arrow-left" />
+              Back
             </button>
             <button
               onClick={handleSaveAndVerify}
               disabled={!accounts || accounts.length === 0}
-              className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
             >
+              <Icon name="shield" />
               Save &amp; Verify
             </button>
           </div>
@@ -242,14 +247,15 @@ export default function UploadPage() {
         <div>
           <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm text-indigo-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-200 text-indigo-700 text-xs font-bold">1</span>
+              <Icon name="server" className="w-5 h-5" />
               <span className="font-medium">Servers:</span>
               {serverConfig.srcHost}:{serverConfig.srcPort} ({SEC_LABEL[serverConfig.srcSecurity]}) &rarr; {serverConfig.dstHost}:{serverConfig.dstPort} ({SEC_LABEL[serverConfig.dstSecurity]})
             </div>
             <button
               onClick={() => setStep(0)}
-              className="text-indigo-600 hover:underline text-sm font-medium"
+              className="inline-flex items-center gap-1 text-indigo-600 hover:underline text-sm font-medium"
             >
+              <Icon name="pencil" className="w-3.5 h-3.5" />
               Edit
             </button>
           </div>
@@ -259,10 +265,7 @@ export default function UploadPage() {
           {/* Verification progress */}
           {verifying && (
             <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm text-indigo-700 flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
+              <Icon name="spinner" />
               Verifying accounts... {passedCount}/{totalCount} passed
             </div>
           )}
@@ -270,7 +273,7 @@ export default function UploadPage() {
           {/* All verified banner */}
           {verified && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-200 text-green-700 text-xs font-bold">&#10003;</span>
+              <Icon name="check-circle" className="w-5 h-5" />
               All {totalCount} accounts authenticated successfully
             </div>
           )}
@@ -278,16 +281,18 @@ export default function UploadPage() {
           <div className="mt-6 flex items-center gap-3 flex-wrap">
             <button
               onClick={() => { setStep(1); setAuthResults([]); setVerified(false); }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
-              &larr; Back
+              <Icon name="arrow-left" />
+              Back
             </button>
 
             {!verifying && (
               <button
                 onClick={() => runVerification(accounts)}
-                className="px-5 py-2 text-sm rounded-md font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                className="inline-flex items-center gap-1.5 px-5 py-2 text-sm rounded-md font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               >
+                <Icon name="refresh" />
                 Re-verify
               </button>
             )}
@@ -323,8 +328,9 @@ export default function UploadPage() {
                 <button
                   onClick={handleStart}
                   disabled={starting}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
                 >
+                  <Icon name={starting ? 'spinner' : 'play'} />
                   {starting ? 'Starting...' : 'Start Migration'}
                 </button>
               </>

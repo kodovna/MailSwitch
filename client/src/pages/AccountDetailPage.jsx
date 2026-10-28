@@ -6,6 +6,7 @@ import { percent, formatDuration } from '../lib/format';
 import StatusBadge from '../components/StatusBadge';
 import FolderProgress from '../components/FolderProgress';
 import ErrorLog from '../components/ErrorLog';
+import Icon from '../components/Icon';
 
 export default function AccountDetailPage() {
   const { id } = useParams();
@@ -64,7 +65,8 @@ export default function AccountDetailPage() {
   return (
     <div>
       <div className="mb-6">
-        <Link to={`/jobs/${account.job_id}`} className="text-sm text-indigo-600 hover:underline">
+        <Link to={`/jobs/${account.job_id}`} className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+          <Icon name="arrow-left" className="w-3.5 h-3.5" />
           Back to Job #{account.job_id}
         </Link>
       </div>
@@ -77,8 +79,9 @@ export default function AccountDetailPage() {
             {account.status === 'failed' && (
               <button
                 onClick={async () => { await api.retryAccount(account.id); fetchData(); }}
-                className="px-3 py-1 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600"
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600"
               >
+                <Icon name="refresh" />
                 Retry
               </button>
             )}

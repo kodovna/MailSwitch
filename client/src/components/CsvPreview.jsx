@@ -1,10 +1,16 @@
+import Icon from './Icon';
+
 function AuthIcon({ status, error }) {
   if (!status) return <span className="text-gray-300">--</span>;
-  if (status === 'loading') return <span className="text-indigo-500 animate-pulse">...</span>;
+  if (status === 'loading') return <Icon name="spinner" className="inline w-4 h-4 text-indigo-500" />;
   if (status === 'success') {
-    return <span className="text-green-600" title="Authenticated">&#10003;</span>;
+    return <Icon name="check-circle" className="inline w-5 h-5 text-green-600" />;
   }
-  return <span className="text-red-600 cursor-help" title={error || 'Failed'}>&#10007;</span>;
+  return (
+    <span className="cursor-help" title={error || 'Failed'}>
+      <Icon name="x-circle" className="inline w-5 h-5 text-red-600" />
+    </span>
+  );
 }
 
 export default function CsvPreview({ accounts, authResults }) {
@@ -14,7 +20,8 @@ export default function CsvPreview({ accounts, authResults }) {
 
   return (
     <div className="mt-6 overflow-x-auto">
-      <h3 className="text-lg font-semibold mb-3">
+      <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
+        <Icon name="users" className="w-5 h-5 text-gray-400" />
         Preview ({accounts.length} account{accounts.length !== 1 ? 's' : ''})
       </h3>
       <table className="min-w-full divide-y divide-gray-200 text-sm">

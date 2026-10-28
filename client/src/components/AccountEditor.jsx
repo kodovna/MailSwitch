@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatBytes } from '../lib/format';
+import Icon from './Icon';
 
 const MAX_ACCOUNTS = 500;
 const EMPTY_ACCOUNT = { src_email: '', src_password: '', dst_email: '', dst_password: '' };
@@ -316,14 +317,19 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
         />
         <div className="text-gray-500">
           {uploading ? (
-            <p className="text-sm">Processing CSV...</p>
+            <p className="inline-flex items-center gap-2 text-sm">
+              <Icon name="spinner" />
+              Processing CSV...
+            </p>
           ) : accounts.length > 0 ? (
-            <p className="text-sm">
-              Drop a CSV to <span className="font-medium">replace</span> accounts, or{' '}
-              <span className="text-indigo-600 font-medium">click to browse</span>
+            <p className="inline-flex items-center gap-2 text-sm">
+              <Icon name="upload" className="w-5 h-5" />
+              <span>Drop a CSV to <span className="font-medium">replace</span> accounts, or{' '}
+              <span className="text-indigo-600 font-medium">click to browse</span></span>
             </p>
           ) : (
             <>
+              <Icon name="upload" className="w-10 h-10 mx-auto mb-2 text-gray-400" />
               <p className="text-lg font-medium">Drop your CSV file here or click to browse</p>
               <p className="mt-1 text-sm">Format: src_email, src_password, dst_email, dst_password</p>
               <p className="mt-3 text-sm text-gray-400">— or add accounts manually below —</p>
@@ -382,9 +388,7 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
         onClick={handleAdd}
         className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
+        <Icon name="plus" />
         Add Account Manually
       </button>
       {domains.size > 0 && (
@@ -393,9 +397,7 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
           onClick={() => setDomainOpen(!domainOpen)}
           className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          <Icon name="globe" />
           Add Domain
         </button>
       )}
@@ -432,8 +434,9 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
             type="button"
             onClick={handleAddDomain}
             disabled={!domain || domainLoading}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
           >
+            <Icon name={domainLoading ? 'spinner' : 'plus'} />
             {domainLoading ? 'Adding...' : 'Add mailboxes'}
           </button>
           {domainMessage && (

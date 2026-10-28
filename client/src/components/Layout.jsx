@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import Icon from './Icon';
 
 export default function Layout({ children }) {
   const { requiresAuth, logout } = useAuth();
@@ -9,24 +10,28 @@ export default function Layout({ children }) {
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14 items-center">
-            <Link to="/" className="text-xl font-bold text-indigo-600">
+            <Link to="/" className="inline-flex items-center gap-2 text-xl font-bold text-indigo-600">
+              <Icon name="envelope" className="w-6 h-6" />
               MailSwitch
             </Link>
             <div className="flex items-center gap-4">
-              <Link to="/jobs" className="text-sm text-gray-600 hover:text-gray-900">
+              <Link to="/jobs" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+                <Icon name="jobs" />
                 Jobs
               </Link>
               <Link
                 to="/"
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700"
               >
+                <Icon name="plus" />
                 New Migration
               </Link>
               {requiresAuth && (
                 <button
                   onClick={logout}
-                  className="text-sm text-gray-400 hover:text-gray-600"
+                  className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
                 >
+                  <Icon name="logout" />
                   Logout
                 </button>
               )}
