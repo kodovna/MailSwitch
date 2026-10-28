@@ -93,7 +93,7 @@ function SuggestInput({ value, suggestions, onChange, placeholder, className }) 
   );
 }
 
-function AccountRow({ account, index, mailboxes, mailboxList, onChange, onRemove }) {
+function AccountRow({ account, index, mailboxes, mailboxList, usage, onChange, onRemove }) {
   const [showPasswords, setShowPasswords] = useState(false);
 
   function handleChange(field, value) {
@@ -133,13 +133,25 @@ function AccountRow({ account, index, mailboxes, mailboxList, onChange, onRemove
         />
       </td>
       <td className="px-2 py-1.5">
-        <input
-          type="email"
-          value={account.dst_email}
-          onChange={(e) => handleChange('dst_email', e.target.value)}
-          placeholder="dest@example.com"
-          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-        />
+        <div className="relative">
+          <input
+            type="email"
+            value={account.dst_email}
+            onChange={(e) => handleChange('dst_email', e.target.value)}
+            placeholder="dest@example.com"
+            className={`w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${
+              usage != null ? 'pr-20' : ''
+            }`}
+          />
+          {usage != null && (
+            <span
+              title="Mailbox size from the CSV"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 tabular-nums pointer-events-none"
+            >
+              {formatBytes(usage * 1024)}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-2 py-1.5">
         <input
@@ -195,6 +207,12 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
   }, []);
 
   const mailboxSet = new Set(mailboxes.map((m) => m.email));
+
+  // Sizes (KB) from the CSV, looked up by destination address; unknown for anything not in it
+  const usageByEmail = new Map(mailboxes.filter((m) => m.usage != null).map((m) => [m.email, m.usage]));
+  const usageOf = (acct) => usageByEmail.get(String(acct.dst_email || '').trim().toLowerCase());
+  const known = accounts.map(usageOf).filter((u) => u != null);
+  const totalKb = known.reduce((sum, u) => sum + u, 0);
 
   function handleFileUpload(file) {
     if (file) onUploadCsv(file);
@@ -268,6 +286,12 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-700">
               {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+              {known.length > 0 && (
+                <span className="ml-2 font-normal text-gray-500">
+                  &middot; {formatBytes(totalKb * 1024)}
+                  {known.length < accounts.length && ` (${known.length} of ${accounts.length})`}
+                </span>
+              )}
             </h3>
           </div>
           <table className="min-w-full text-sm">
@@ -289,6 +313,7 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
                   index={i}
                   mailboxes={mailboxSet}
                   mailboxList={mailboxes}
+                  usage={usageOf(acct)}
                   onChange={handleAccountChange}
                   onRemove={handleRemove}
                 />
