@@ -23,8 +23,7 @@ export const config = {
 
   // Mailbox suggestions for the "new migration" form (CSV: email, username, password; no header needed)
   mailboxCsvPath: process.env.MAILBOX_CSV_PATH || '',
-  // Source accounts are read through "<email><suffix>" duplicates sharing one password
-  migrateSuffix: process.env.MIGRATE_SUFFIX || '-migrate',
+  // Shared password of the source accounts (the "username" column of the CSV)
   migratePassword: process.env.MAILBOX_MIGRATE_PASSWORD || '',
 
   // TLS

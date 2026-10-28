@@ -20,7 +20,7 @@ function load() {
       const email = String(row[0] || '').trim().toLowerCase();
       if (!email.includes('@')) continue;
       entries.set(email, {
-        username: String(row[1] || '').trim() || email,
+        username: String(row[1] || '').trim(),
         password: String(row[2] || ''),
       });
     }
@@ -36,16 +36,16 @@ export function listMailboxes() {
   return [...load().keys()].sort();
 }
 
-// Builds a prefilled account: source is the "-migrate" duplicate with the shared password,
-// destination uses the plain address with the credentials from the CSV.
+// Builds a prefilled account: source logs in as the CSV username with the shared password,
+// destination is the address itself with the password from the CSV.
 export function buildAccount(email) {
-  const entry = load().get(String(email || '').trim().toLowerCase());
+  const key = String(email || '').trim().toLowerCase();
+  const entry = load().get(key);
   if (!entry) return null;
-  const key = String(email).trim().toLowerCase();
   return {
-    src_email: `${key}${config.migrateSuffix}`,
+    src_email: entry.username,
     src_password: config.migratePassword,
-    dst_email: entry.username,
+    dst_email: key,
     dst_password: entry.password,
   };
 }
