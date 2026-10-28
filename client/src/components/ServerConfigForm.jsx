@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
+import Icon from './Icon';
 
 const SECURITY_OPTIONS = [
   { value: 'ssl', label: 'SSL/TLS', port: 993, desc: 'Implicit TLS (recommended)' },
@@ -32,7 +33,7 @@ function StatusMessage({ status, error }) {
   if (status === 'success') {
     return (
       <p className="text-sm text-green-600 flex items-center gap-1">
-        <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-green-100">&#10003;</span>
+        <Icon name="check-circle" />
         Connected successfully
       </p>
     );
@@ -40,7 +41,7 @@ function StatusMessage({ status, error }) {
   if (status === 'error') {
     return (
       <p className="text-sm text-red-600 flex items-center gap-1">
-        <span className="inline-block w-4 h-4 text-center leading-4 rounded-full bg-red-100">&#10007;</span>
+        <Icon name="x-circle" className="w-4 h-4 shrink-0" />
         {error}
       </p>
     );
@@ -101,7 +102,10 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Source Server</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-3">
+            <Icon name="server" className="w-4 h-4 text-gray-400" />
+            Source Server
+          </h3>
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-600 mb-1">Host</label>
@@ -134,7 +138,10 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
         </div>
 
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Destination Server</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-3">
+            <Icon name="server" className="w-4 h-4 text-gray-400" />
+            Destination Server
+          </h3>
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-600 mb-1">Host</label>
@@ -169,7 +176,7 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
 
       {bothPassed && (
         <div className="mt-6 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
-          <span className="inline-block w-5 h-5 text-center leading-5 rounded-full bg-green-100 font-bold">&#10003;</span>
+          <Icon name="check-circle" className="w-5 h-5" />
           Both servers connected successfully
         </div>
       )}
@@ -178,12 +185,13 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
         <button
           onClick={handleTest}
           disabled={!canTest || testing}
-          className={`px-6 py-2 rounded-md font-medium disabled:opacity-50 ${
+          className={`inline-flex items-center gap-1.5 px-6 py-2 rounded-md font-medium disabled:opacity-50 ${
             bothPassed
               ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               : 'bg-indigo-600 text-white hover:bg-indigo-700'
           }`}
         >
+          <Icon name={testing ? 'spinner' : bothPassed ? 'refresh' : 'bolt'} />
           {testing ? 'Testing...' : bothPassed ? 'Re-test' : 'Test Connections'}
         </button>
 
@@ -193,9 +201,10 @@ export default function ServerConfigForm({ onConfigVerified, initialConfig }) {
               srcHost, srcPort: Number(srcPort), srcSecurity,
               dstHost, dstPort: Number(dstPort), dstSecurity,
             })}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700"
+            className="inline-flex items-center gap-1.5 px-6 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700"
           >
             Next
+            <Icon name="arrow-right" />
           </button>
         )}
       </div>

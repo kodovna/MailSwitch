@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatDate, formatDuration, percent } from '../lib/format';
 import StatusBadge from '../components/StatusBadge';
+import Icon from '../components/Icon';
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
@@ -23,21 +24,23 @@ export default function JobsPage() {
         </div>
         <Link
           to="/"
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
         >
-          + New Migration
+          <Icon name="plus" />
+          New Migration
         </Link>
       </div>
 
       {jobs.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-400 text-4xl mb-3">&#9993;</p>
+          <Icon name="inbox" className="w-12 h-12 mx-auto mb-3 text-gray-300" />
           <p className="text-gray-600 text-lg font-medium">No migration jobs yet</p>
           <p className="text-gray-400 text-sm mt-1 mb-4">Start by configuring your servers and uploading a CSV</p>
           <Link
             to="/"
-            className="inline-block px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+            className="inline-flex items-center gap-1.5 px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
           >
+            <Icon name="plus" />
             Start First Migration
           </Link>
         </div>
@@ -62,7 +65,8 @@ export default function JobsPage() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <StatusBadge status={job.status} />
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                          <Icon name={job.mode === 'continuous' ? 'refresh' : 'arrow-right'} className="w-3 h-3" />
                           {job.mode === 'continuous' ? 'Continuous' : 'One-time'}
                         </span>
                       </div>
@@ -70,7 +74,8 @@ export default function JobsPage() {
                     </div>
 
                     {job.name && <p className="text-base font-semibold text-gray-900 mb-1">{job.name}</p>}
-                    <p className={`text-sm font-medium mb-3 ${job.name ? 'text-gray-500' : 'text-gray-700'}`}>
+                    <p className={`flex items-center gap-1.5 text-sm font-medium mb-3 ${job.name ? 'text-gray-500' : 'text-gray-700'}`}>
+                      <Icon name="server" className="w-4 h-4 text-gray-400" />
                       {job.src_host}:{job.src_port} &rarr; {job.dst_host}:{job.dst_port}
                     </p>
 
@@ -86,17 +91,26 @@ export default function JobsPage() {
                     </div>
 
                     <div className="flex items-center gap-5 text-xs text-gray-500">
-                      <span>{job.completed_accounts}/{job.total_accounts} accounts</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="users" className="w-3.5 h-3.5" />
+                        {job.completed_accounts}/{job.total_accounts} accounts
+                      </span>
                       {job.failed_accounts > 0 && (
-                        <span className="text-red-500">{job.failed_accounts} failed</span>
+                        <span className="inline-flex items-center gap-1 text-red-500">
+                          <Icon name="exclamation-triangle" className="w-3.5 h-3.5" />
+                          {job.failed_accounts} failed
+                        </span>
                       )}
-                      <span>{formatDuration(job.started_at, job.finished_at)}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="clock" className="w-3.5 h-3.5" />
+                        {formatDuration(job.started_at, job.finished_at)}
+                      </span>
                     </div>
                   </div>
 
                   {/* Arrow indicator */}
                   <div className="flex items-center px-4 text-gray-300">
-                    &rsaquo;
+                    <Icon name="chevron-right" className="w-5 h-5" />
                   </div>
                 </div>
               </Link>

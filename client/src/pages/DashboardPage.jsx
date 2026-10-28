@@ -7,6 +7,7 @@ import SyncToggle from '../components/SyncToggle';
 import SyncCountdown from '../components/SyncCountdown';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../lib/api';
+import Icon from '../components/Icon';
 
 export default function DashboardPage() {
   const { id } = useParams();
@@ -64,8 +65,9 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-4">
-        <Link to="/jobs" className="text-sm text-indigo-600 hover:underline">
-          &larr; All Jobs
+        <Link to="/jobs" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+          <Icon name="arrow-left" className="w-3.5 h-3.5" />
+          All Jobs
         </Link>
       </div>
 
@@ -85,11 +87,13 @@ export default function DashboardPage() {
                 placeholder={`Job #${job.id}`}
                 className="border border-gray-300 rounded-md px-3 py-1.5 text-lg font-bold w-80"
               />
-              <button type="submit" className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+              <button type="submit" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+                <Icon name="check" />
                 Save
               </button>
               <button type="button" onClick={() => setEditingName(false)} className="text-sm text-gray-500 hover:underline">
-                Cancel
+                <Icon name="x-circle" />
+              Cancel
               </button>
             </form>
           ) : (
@@ -98,8 +102,9 @@ export default function DashboardPage() {
               {job.name && <span className="text-sm text-gray-400">#{job.id}</span>}
               <button
                 onClick={() => { setNameDraft(job.name || ''); setEditingName(true); }}
-                className="text-sm text-indigo-600 hover:underline"
+                className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
               >
+                <Icon name="pencil" className="w-3.5 h-3.5" />
                 Rename
               </button>
             </div>
@@ -131,8 +136,9 @@ export default function DashboardPage() {
             <button
               onClick={() => runAction(() => api.startJob(job.id))}
               disabled={actionLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
             >
+              <Icon name={job.status === 'pending' ? 'play' : 'refresh'} />
               {job.status === 'pending' ? 'Start' : 'Restart'}
             </button>
           )}
@@ -141,8 +147,9 @@ export default function DashboardPage() {
             <button
               onClick={() => runAction(() => api.startJob(job.id))}
               disabled={actionLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
             >
+              <Icon name="play" />
               Resume
             </button>
           )}
@@ -151,8 +158,9 @@ export default function DashboardPage() {
             <button
               onClick={() => runAction(() => api.pauseJob(job.id))}
               disabled={actionLoading}
-              className="px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 rounded-md hover:bg-yellow-200 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 rounded-md hover:bg-yellow-200 disabled:opacity-50"
             >
+              <Icon name="pause" />
               Pause
             </button>
           )}
@@ -161,7 +169,7 @@ export default function DashboardPage() {
             <button
               onClick={() => setConfirmAction('cancel')}
               disabled={actionLoading}
-              className="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -171,8 +179,9 @@ export default function DashboardPage() {
             <button
               onClick={() => runAction(() => api.retryFailed(job.id))}
               disabled={actionLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 disabled:opacity-50"
             >
+              <Icon name="refresh" />
               Retry Failed
             </button>
           )}
@@ -181,8 +190,9 @@ export default function DashboardPage() {
             <button
               onClick={() => runAction(() => api.resyncJob(job.id))}
               disabled={actionLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
             >
+              <Icon name="refresh" />
               Resync
             </button>
           )}
@@ -190,8 +200,9 @@ export default function DashboardPage() {
           <button
             onClick={() => setConfirmAction('delete')}
             disabled={actionLoading}
-            className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
           >
+            <Icon name="trash" />
             Delete
           </button>
         </div>

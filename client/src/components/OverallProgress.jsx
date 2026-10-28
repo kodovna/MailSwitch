@@ -1,5 +1,6 @@
 import { percent, formatDuration } from '../lib/format';
 import StatusBadge from './StatusBadge';
+import Icon from './Icon';
 
 function parseDate(str) {
   if (!str) return null;
@@ -56,23 +57,23 @@ export default function OverallProgress({ job, accounts }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
         <div>
-          <p className="text-gray-500">Accounts</p>
+          <p className="flex items-center gap-1 text-gray-500"><Icon name="users" className="w-4 h-4" />Accounts</p>
           <p className="text-xl font-semibold">{completedAccounts}/{job.total_accounts}</p>
         </div>
         <div>
-          <p className="text-gray-500">Messages</p>
+          <p className="flex items-center gap-1 text-gray-500"><Icon name="envelope" className="w-4 h-4" />Messages</p>
           <p className="text-xl font-semibold">{migratedMessages.toLocaleString()}/{totalMessages.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-gray-500">Failed</p>
+          <p className="flex items-center gap-1 text-gray-500"><Icon name="exclamation-triangle" className="w-4 h-4" />Failed</p>
           <p className="text-xl font-semibold text-red-600">{failedMessages.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-gray-500">Duration</p>
+          <p className="flex items-center gap-1 text-gray-500"><Icon name="clock" className="w-4 h-4" />Duration</p>
           <p className="text-xl font-semibold">{formatDuration(job.started_at, job.finished_at)}</p>
         </div>
         <div>
-          <p className="text-gray-500">Failed Accounts</p>
+          <p className="flex items-center gap-1 text-gray-500"><Icon name="x-circle" className="w-4 h-4" />Failed Accounts</p>
           <p className="text-xl font-semibold text-red-600">{failedAccounts}</p>
         </div>
       </div>
