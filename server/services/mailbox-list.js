@@ -5,7 +5,7 @@ import { logger } from '../utils/logger.js';
 
 let cache = { path: null, mtimeMs: 0, entries: new Map() };
 
-// CSV columns: email, username, password, usage (bytes, optional). A header row is skipped (first cell has no "@").
+// CSV columns: email, username, password, usage (kilobytes, optional). A header row is skipped (first cell has no "@").
 function load() {
   const path = config.mailboxCsvPath;
   if (!path) return new Map();
