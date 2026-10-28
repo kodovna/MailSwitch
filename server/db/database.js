@@ -65,6 +65,10 @@ export const jobQueries = {
     `).run(id, id, id);
   },
 
+  delete(id) {
+    return getDb().prepare('DELETE FROM migration_jobs WHERE id = ?').run(id);
+  },
+
   getAll() {
     return getDb().prepare('SELECT * FROM migration_jobs ORDER BY created_at DESC').all();
   }

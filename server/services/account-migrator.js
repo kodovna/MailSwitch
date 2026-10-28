@@ -161,6 +161,13 @@ export class AccountMigrator {
         totalMessages: srcMailbox.exists || 0,
       });
 
+      // Nothing new since the last sync (UIDNEXT hasn't moved past last_uid)
+      if (!fullSync && srcMailbox.uidNext && lastUid + 1 >= srcMailbox.uidNext) {
+        folderQueries.updateStatus(account.id, folderPath, 'completed');
+        eventBus.emitFolderUpdate(jobId, account.id, folderPath, { status: 'completed' });
+        return;
+      }
+
       if (srcMailbox.exists === 0) {
         folderQueries.updateStatus(account.id, folderPath, 'completed');
         eventBus.emitFolderUpdate(jobId, account.id, folderPath, { status: 'completed' });
@@ -182,6 +189,9 @@ export class AccountMigrator {
 
       // Open destination folder
       await this.dstClient.openFolder(folderPath);
+
+      // `N:*` always returns the last message even when its UID < N
+      messages = messages.filter((m) => m.uid > lastUid);
 
       // Append each message
       for (const msg of messages) {
@@ -230,15 +240,17 @@ export class AccountMigrator {
       folderQueries.updateStatus(account.id, folderPath, 'completed');
       eventBus.emitFolderUpdate(jobId, account.id, folderPath, { status: 'completed' });
     } catch (err) {
-      logger.error(`Failed to migrate folder ${folderPath}`, { accountId: account.id, error: err.message });
+      // imapflow reports only "Command failed"; the server's reason is in responseText
+      const reason = err.responseText ? `${err.message}: ${err.responseText}` : err.message;
+      logger.error(`Failed to migrate folder ${folderPath}`, { accountId: account.id, error: reason });
       folderQueries.updateStatus(account.id, folderPath, 'failed');
       errorQueries.create(account.id, {
         folderPath,
         errorType: 'folder',
-        errorMessage: err.message,
+        errorMessage: reason,
         retryable: true,
       });
-      eventBus.emitFolderUpdate(jobId, account.id, folderPath, { status: 'failed', error: err.message });
+      eventBus.emitFolderUpdate(jobId, account.id, folderPath, { status: 'failed', error: reason });
     }
   }
 

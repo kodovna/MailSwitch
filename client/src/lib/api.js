@@ -86,6 +86,10 @@ export const api = {
     return request(`/jobs/${id}/cancel`, { method: 'POST' });
   },
 
+  deleteJob(id) {
+    return request(`/jobs/${id}`, { method: 'DELETE' });
+  },
+
   retryFailed(id) {
     return request(`/jobs/${id}/retry-failed`, { method: 'POST' });
   },

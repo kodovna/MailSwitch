@@ -129,6 +129,16 @@ router.post('/:id/cancel', (req, res) => {
   }
 });
 
+// Delete a job (cancels it first if still active)
+router.delete('/:id', (req, res) => {
+  try {
+    migrationEngine.deleteJob(Number(req.params.id));
+    res.json({ status: 'deleted' });
+  } catch (err) {
+    res.status(err.message === 'Job not found' ? 404 : 400).json({ error: err.message });
+  }
+});
+
 // Retry all failed accounts
 router.post('/:id/retry-failed', (req, res) => {
   try {

@@ -143,6 +143,15 @@ class MigrationEngine {
     eventBus.emitJobUpdate(jobId, { status: 'cancelled' });
   }
 
+  deleteJob(jobId) {
+    const job = jobQueries.getById(jobId);
+    if (!job) throw new Error('Job not found');
+
+    if (job.status !== 'cancelled') this.cancelJob(jobId);
+    jobQueries.delete(jobId);
+    eventBus.emitJobUpdate(jobId, { status: 'deleted' });
+  }
+
   retryFailedAccounts(jobId) {
     const job = jobQueries.getById(jobId);
     if (!job) throw new Error('Job not found');
