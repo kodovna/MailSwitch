@@ -21,6 +21,12 @@ export const config = {
   // Encryption key for passwords at rest (32 bytes hex = 64 chars)
   encryptionKey: process.env.ENCRYPTION_KEY || '',
 
+  // Mailbox suggestions for the "new migration" form (CSV: email, username, password; no header needed)
+  mailboxCsvPath: process.env.MAILBOX_CSV_PATH || '',
+  // Source accounts are read through "<email><suffix>" duplicates sharing one password
+  migrateSuffix: process.env.MIGRATE_SUFFIX || '-migrate',
+  migratePassword: process.env.MAILBOX_MIGRATE_PASSWORD || '',
+
   // TLS
   allowSelfSignedCerts: process.env.ALLOW_SELF_SIGNED_CERTS === 'true',
 };

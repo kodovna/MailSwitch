@@ -1,12 +1,24 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { api } from '../lib/api';
 
 const EMPTY_ACCOUNT = { src_email: '', src_password: '', dst_email: '', dst_password: '' };
 
-function AccountRow({ account, index, onChange, onRemove }) {
+function AccountRow({ account, index, mailboxes, onChange, onRemove }) {
   const [showPasswords, setShowPasswords] = useState(false);
 
   function handleChange(field, value) {
     onChange(index, { ...account, [field]: value });
+  }
+
+  // Picking a known address from the suggestions fills in the rest of the row
+  async function handleSourceChange(value) {
+    handleChange('src_email', value);
+    if (!mailboxes.has(value.trim().toLowerCase())) return;
+    try {
+      onChange(index, await api.getMailboxAccount(value.trim()));
+    } catch {
+      // keep what was typed
+    }
   }
 
   return (
@@ -16,7 +28,8 @@ function AccountRow({ account, index, onChange, onRemove }) {
         <input
           type="email"
           value={account.src_email}
-          onChange={(e) => handleChange('src_email', e.target.value)}
+          onChange={(e) => handleSourceChange(e.target.value)}
+          list="mailbox-suggestions"
           placeholder="source@example.com"
           className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
         />
@@ -86,6 +99,13 @@ function AccountRow({ account, index, onChange, onRemove }) {
 export default function AccountEditor({ accounts, onChange, onUploadCsv, uploading }) {
   const inputRef = useRef();
   const [dragOver, setDragOver] = useState(false);
+  const [mailboxes, setMailboxes] = useState([]);
+
+  useEffect(() => {
+    api.getMailboxes().then((d) => setMailboxes(d.mailboxes)).catch(() => {});
+  }, []);
+
+  const mailboxSet = new Set(mailboxes);
 
   function handleFileUpload(file) {
     if (file) onUploadCsv(file);
@@ -178,6 +198,7 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
                   key={i}
                   account={acct}
                   index={i}
+                  mailboxes={mailboxSet}
                   onChange={handleAccountChange}
                   onRemove={handleRemove}
                 />
@@ -186,6 +207,10 @@ export default function AccountEditor({ accounts, onChange, onUploadCsv, uploadi
           </table>
         </div>
       )}
+
+      <datalist id="mailbox-suggestions">
+        {mailboxes.map((m) => <option key={m} value={m} />)}
+      </datalist>
 
       {/* Add account button */}
       <button
