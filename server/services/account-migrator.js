@@ -292,6 +292,9 @@ export class AccountMigrator {
       for (let i = 0; i < uids.length; i += FETCH_BATCH_SIZE) {
         if (this.cancelled) break;
         const messages = await this.fetchBatch(folderPath, uids.slice(i, i + FETCH_BATCH_SIZE));
+        logger.info(`${folderPath}: copying messages ${i + 1}-${Math.min(i + FETCH_BATCH_SIZE, uids.length)} of ${uids.length}`, {
+          accountId: account.id,
+        });
 
         // Append each message
         for (const msg of messages) {
