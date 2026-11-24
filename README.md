@@ -149,6 +149,7 @@ Environment variables (set in `docker-compose.yml`):
 | `SYNC_INTERVAL` | `300` | Continuous sync interval in seconds |
 | `MAX_RETRIES` | `3` | Connection retry attempts |
 | `MESSAGE_RETRIES` | `2` | Per-message retry attempts |
+| `TRUST_PROXY` | _(empty)_ | Number of reverse proxies in front of the app (e.g. `1`). Set it when the log shows `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`, so rate limiting sees real client IPs |
 | `LOG_LEVEL` | `info` | Log level (error, warn, info, debug) |
 | `MAILBOX_CSV_PATH` | _(empty)_ | CSV with columns `email, username, password` and optionally `usage` in kilobytes, shown next to the address in the suggestions (header optional). Its addresses are suggested in the source e-mail field of step 2 |
 
