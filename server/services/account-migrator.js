@@ -145,6 +145,8 @@ export class AccountMigrator {
         await this.migrateFolder(folder.path);
       }
 
+      if (!this.cancelled) await this.syncCounts(srcFolders);
+
       if (this.cancelled) {
         accountQueries.updateStatus(account.id, 'cancelled');
         eventBus.emitAccountUpdate(jobId, account.id, { status: 'cancelled' });
@@ -175,6 +177,34 @@ export class AccountMigrator {
       eventBus.emitAccountUpdate(jobId, account.id, { status: 'failed', error: err.message });
     } finally {
       await this.disconnect();
+    }
+  }
+
+  // After a run, set the headline numbers from what is really in the mailboxes: the total is the
+  // source count and "migrated" is, per folder, how many of those messages the destination holds
+  // (capped at the source count, so duplicates or an old lifetime counter can't exceed 100 %).
+  // Never fails the account: if any folder can't be read, the counters are left as they are.
+  async syncCounts(srcFolders) {
+    const { account, jobId } = this;
+    try {
+      await this.ensureConnected();
+
+      let total = 0;
+      let present = 0;
+      for (const folder of srcFolders) {
+        const [src, dst] = await Promise.all([
+          this.srcClient.getStatus(folder.path),
+          this.dstClient.getStatus(folder.path),
+        ]);
+        total += src.messages || 0;
+        present += Math.min(src.messages || 0, dst.messages || 0);
+      }
+
+      accountQueries.updateProgress(account.id, { totalMessages: total, migratedMessages: present });
+      this.migratedCount = present;
+      eventBus.emitAccountUpdate(jobId, account.id, { totalMessages: total, migratedMessages: present });
+    } catch (err) {
+      logger.warn(`Could not recount messages for ${account.src_email}`, { accountId: account.id, error: err.message });
     }
   }
 
