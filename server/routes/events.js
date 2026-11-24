@@ -10,6 +10,7 @@ router.get('/', (req, res) => {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // keep nginx from holding events back
   });
 
   res.write(':\n\n'); // SSE comment to establish connection

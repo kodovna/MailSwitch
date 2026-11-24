@@ -15,7 +15,7 @@ export function formatDuration(start, end) {
   const s = parseDate(start);
   if (!s) return '-';
   const e = end ? parseDate(end) : new Date();
-  const diff = Math.floor((e - s) / 1000);
+  const diff = Math.max(0, Math.floor((e - s) / 1000));
   if (diff < 60) return `${diff}s`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
   return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;

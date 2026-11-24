@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSSE } from '../hooks/useSSE';
 import { api } from '../lib/api';
+import { normalizeAccountData, normalizeFolderData } from '../lib/normalize';
 import { percent, formatDuration } from '../lib/format';
 import StatusBadge from '../components/StatusBadge';
 import FolderProgress from '../components/FolderProgress';
@@ -38,14 +39,14 @@ export default function AccountDetailPage() {
   useSSE(account?.job_id, {
     onAccountUpdate(data) {
       if (data.accountId === Number(id)) {
-        setAccount((prev) => (prev ? { ...prev, ...data } : prev));
+        setAccount((prev) => (prev ? { ...prev, ...normalizeAccountData(data) } : prev));
       }
     },
     onFolderUpdate(data) {
       if (data.accountId === Number(id)) {
         setFolders((prev) =>
           prev.map((f) =>
-            f.folder_path === data.folderPath ? { ...f, ...data } : f
+            f.folder_path === data.folderPath ? { ...f, ...normalizeFolderData(data) } : f
           )
         );
       }

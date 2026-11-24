@@ -176,6 +176,15 @@ export class AccountMigrator {
     }
   }
 
+  emitFolderCounters(folderPath) {
+    const row = folderQueries.get(this.account.id, folderPath);
+    if (!row) return;
+    eventBus.emitFolderUpdate(this.jobId, this.account.id, folderPath, {
+      migratedMessages: row.migrated_messages,
+      failedMessages: row.failed_messages,
+    });
+  }
+
   recordFailedMessage(folderPath, uid, message, { retryable = true } = {}) {
     const { account, jobId } = this;
 
@@ -186,6 +195,7 @@ export class AccountMigrator {
 
     folderQueries.incrementFailed(account.id, folderPath);
     accountQueries.incrementFailed(account.id);
+    this.emitFolderCounters(folderPath);
 
     errorQueries.create(account.id, {
       folderPath,
@@ -292,8 +302,15 @@ export class AccountMigrator {
       for (let i = 0; i < uids.length; i += FETCH_BATCH_SIZE) {
         if (this.cancelled) break;
         const messages = await this.fetchBatch(folderPath, uids.slice(i, i + FETCH_BATCH_SIZE));
+        const mem = process.memoryUsage();
         logger.info(`${folderPath}: copying messages ${i + 1}-${Math.min(i + FETCH_BATCH_SIZE, uids.length)} of ${uids.length}`, {
           accountId: account.id,
+          // heap growth points at a leak; growth in external/rss alone is buffers waiting for GC
+          memoryMB: {
+            rss: Math.round(mem.rss / 1048576),
+            heap: Math.round(mem.heapUsed / 1048576),
+            external: Math.round((mem.external + mem.arrayBuffers) / 1048576),
+          },
         });
 
         // Append each message
@@ -311,6 +328,7 @@ export class AccountMigrator {
             folderQueries.updateLastUid(account.id, folderPath, msg.uid);
             accountQueries.incrementMigrated(account.id);
             this.migratedCount++;
+            this.emitFolderCounters(folderPath);
 
             eventBus.emitAccountUpdate(jobId, account.id, {
               migratedMessages: this.migratedCount,
