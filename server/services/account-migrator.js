@@ -122,18 +122,20 @@ export class AccountMigrator {
         await this.dstClient.createFolder(folder.path);
       }
 
-      // Count total messages
-      let totalMessages = 0;
+      // Count total messages (per folder, so the total can be corrected when a folder is opened)
+      this.folderCounts = new Map();
+      this.totalMessages = 0;
       for (const folder of srcFolders) {
         try {
           const status = await this.srcClient.getStatus(folder.path);
-          totalMessages += status.messages || 0;
+          this.folderCounts.set(folder.path, status.messages || 0);
+          this.totalMessages += status.messages || 0;
         } catch {
           // skip status errors
         }
       }
-      accountQueries.updateProgress(account.id, { totalMessages });
-      eventBus.emitAccountUpdate(jobId, account.id, { totalMessages });
+      accountQueries.updateProgress(account.id, { totalMessages: this.totalMessages });
+      eventBus.emitAccountUpdate(jobId, account.id, { totalMessages: this.totalMessages });
 
       // Migrate each folder
       for (const folder of srcFolders) {
@@ -174,6 +176,18 @@ export class AccountMigrator {
     } finally {
       await this.disconnect();
     }
+  }
+
+  // Mail keeps arriving in the source while a long run is going: when a folder is opened,
+  // correct the account total by the difference to the count taken at the start of the run
+  refreshTotal(folderPath, exists) {
+    const known = this.folderCounts?.get(folderPath) ?? 0;
+    if (exists === known) return;
+
+    this.folderCounts.set(folderPath, exists);
+    this.totalMessages += exists - known;
+    accountQueries.updateProgress(this.account.id, { totalMessages: this.totalMessages });
+    eventBus.emitAccountUpdate(this.jobId, this.account.id, { totalMessages: this.totalMessages });
   }
 
   emitFolderCounters(folderPath) {
@@ -257,6 +271,7 @@ export class AccountMigrator {
       eventBus.emitAccountUpdate(jobId, account.id, { currentFolder: folderPath });
 
       const srcMailbox = await this.srcClient.openFolder(folderPath);
+      this.refreshTotal(folderPath, srcMailbox.exists || 0);
       const uidValidity = srcMailbox.uidValidity;
       const fullSync = shouldFullSync(account.id, folderPath, uidValidity);
       const lastUid = fullSync ? 0 : getLastUid(account.id, folderPath);
