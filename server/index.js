@@ -127,6 +127,10 @@ function shutdown(signal) {
     logger.info('Server closed');
     process.exit(0);
   });
+  // Open browser tabs keep their event-stream connections alive, which would hold
+  // server.close() until the force-exit below; drop them after a short grace period
+  server.closeIdleConnections?.();
+  setTimeout(() => server.closeAllConnections?.(), 1000).unref();
   setTimeout(() => process.exit(1), 10000);
 }
 
