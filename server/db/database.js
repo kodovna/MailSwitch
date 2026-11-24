@@ -290,5 +290,9 @@ export const errorQueries = {
 
   deleteByAccountId(accountId) {
     getDb().prepare('DELETE FROM migration_errors WHERE account_id = ?').run(accountId);
+  },
+
+  deleteByType(accountId, errorType) {
+    getDb().prepare('DELETE FROM migration_errors WHERE account_id = ? AND error_type = ?').run(accountId, errorType);
   }
 };

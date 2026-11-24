@@ -145,6 +145,8 @@ export class AccountMigrator {
         await this.migrateFolder(folder.path);
       }
 
+      if (!this.cancelled) await this.verifyFolders(srcFolders);
+
       if (this.cancelled) {
         accountQueries.updateStatus(account.id, 'cancelled');
         eventBus.emitAccountUpdate(jobId, account.id, { status: 'cancelled' });
@@ -175,6 +177,44 @@ export class AccountMigrator {
       eventBus.emitAccountUpdate(jobId, account.id, { status: 'failed', error: err.message });
     } finally {
       await this.disconnect();
+    }
+  }
+
+  // Compare the message count of every folder in the source and the destination and record
+  // differences in the error log (type "verify"). Advisory only: it never fails the account.
+  async verifyFolders(srcFolders) {
+    const { account, jobId } = this;
+    try {
+      await this.ensureConnected();
+      errorQueries.deleteByType(account.id, 'verify');
+
+      let differing = 0;
+      for (const folder of srcFolders) {
+        let src;
+        let dst;
+        try {
+          [src, dst] = await Promise.all([
+            this.srcClient.getStatus(folder.path),
+            this.dstClient.getStatus(folder.path),
+          ]);
+        } catch {
+          continue; // folder not readable on one side
+        }
+
+        const diff = (dst.messages || 0) - (src.messages || 0);
+        if (diff === 0) continue;
+
+        differing++;
+        const message = `Source has ${src.messages} messages, destination has ${dst.messages} (${diff > 0 ? '+' : ''}${diff})`;
+        errorQueries.create(account.id, { folderPath: folder.path, errorType: 'verify', errorMessage: message, retryable: false });
+        eventBus.emitError(jobId, account.id, { folderPath: folder.path, error: message });
+      }
+
+      logger.info(`Verification for ${account.src_email}: ${srcFolders.length - differing} of ${srcFolders.length} folders have equal message counts`, {
+        accountId: account.id,
+      });
+    } catch (err) {
+      logger.warn(`Could not verify message counts for ${account.src_email}`, { accountId: account.id, error: err.message });
     }
   }
 
