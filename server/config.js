@@ -13,6 +13,12 @@ export const config = {
   messageRetries: parseInt(process.env.MESSAGE_RETRIES || '2', 10),
   logLevel: process.env.LOG_LEVEL || 'info',
 
+  // Number of reverse proxies in front of the app (e.g. 1), so rate limiting sees the real client IP.
+  // Leave unset when clients connect directly: trusting X-Forwarded-For there lets anyone spoof their IP.
+  trustProxy: process.env.TRUST_PROXY === undefined || process.env.TRUST_PROXY === ''
+    ? false
+    : /^\d+$/.test(process.env.TRUST_PROXY) ? parseInt(process.env.TRUST_PROXY, 10) : process.env.TRUST_PROXY,
+
   // Auth
   adminPassword: process.env.ADMIN_PASSWORD || '',
   jwtSecret: process.env.JWT_SECRET || autoJwtSecret,

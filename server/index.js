@@ -47,6 +47,8 @@ if (!config.encryptionKey) {
 
 const app = express();
 
+if (config.trustProxy) app.set('trust proxy', config.trustProxy);
+
 // Security headers
 app.use(helmet({
   contentSecurityPolicy: {
