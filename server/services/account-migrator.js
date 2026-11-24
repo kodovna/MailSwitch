@@ -4,9 +4,12 @@ import { accountQueries, folderQueries, errorQueries } from '../db/database.js';
 import { eventBus } from './event-bus.js';
 import { retry, retryMessage } from '../utils/retry.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config.js';
 
-const MAX_FOLDER_RETRIES = 2;
+const FOLDER_RETRY_DELAY_MS = 2000;
 const FETCH_BATCH_SIZE = 25;
+// Give up on a folder after this many single messages make the source server drop the connection
+const MAX_POISONED_PER_FOLDER = 5;
 
 function isConnectionError(err) {
   const text = `${err.code || ''} ${err.message || ''}`;
@@ -24,6 +27,7 @@ export class AccountMigrator {
     this.dstClient = null;
     this.migratedCount = account.migrated_messages || 0;
     this.failedFolders = [];
+    this.poisonedInFolder = 0;
   }
 
   cancel() {
@@ -172,8 +176,71 @@ export class AccountMigrator {
     }
   }
 
+  recordFailedMessage(folderPath, uid, message, { retryable = true } = {}) {
+    const { account, jobId } = this;
+
+    logger.warn(`Failed to migrate message UID ${uid} in ${folderPath}`, {
+      accountId: account.id,
+      error: message,
+    });
+
+    folderQueries.incrementFailed(account.id, folderPath);
+    accountQueries.incrementFailed(account.id);
+
+    errorQueries.create(account.id, {
+      folderPath,
+      messageUid: uid,
+      errorType: 'message',
+      errorMessage: message,
+      retryable,
+    });
+
+    eventBus.emitError(jobId, account.id, {
+      folderPath,
+      messageUid: uid,
+      error: message,
+    });
+  }
+
+  // Fetch a batch of messages. If the source drops the connection while doing so, split the
+  // batch in half and retry until the UID that makes the server drop it is found, so one bad
+  // message does not stop the whole folder.
+  async fetchBatch(folderPath, uids) {
+    try {
+      return await this.srcClient.fetchMessages(uids.join(','), {});
+    } catch (err) {
+      if (!isConnectionError(err) || this.cancelled) throw err;
+
+      await this.ensureConnected();
+      await this.srcClient.openFolder(folderPath);
+
+      if (uids.length === 1) {
+        if (++this.poisonedInFolder > MAX_POISONED_PER_FOLDER) {
+          throw new Error(`The source server keeps dropping the connection when fetching messages from ${folderPath}`);
+        }
+        this.recordFailedMessage(
+          folderPath,
+          uids[0],
+          'The source server closes the connection when this message is fetched',
+          { retryable: false }
+        );
+        return [];
+      }
+
+      logger.warn(`Source dropped the connection fetching UIDs ${uids[0]}-${uids[uids.length - 1]} in ${folderPath}, splitting the batch`, {
+        accountId: this.account.id,
+      });
+      const mid = Math.ceil(uids.length / 2);
+      return [
+        ...(await this.fetchBatch(folderPath, uids.slice(0, mid))),
+        ...(await this.fetchBatch(folderPath, uids.slice(mid))),
+      ];
+    }
+  }
+
   async migrateFolder(folderPath, attempt = 0) {
     const { account, jobId } = this;
+    if (attempt === 0) this.poisonedInFolder = 0;
 
     try {
       accountQueries.updateProgress(account.id, { currentFolder: folderPath });
@@ -224,7 +291,7 @@ export class AccountMigrator {
       // memory and overloads the source server on large folders
       for (let i = 0; i < uids.length; i += FETCH_BATCH_SIZE) {
         if (this.cancelled) break;
-        const messages = await this.srcClient.fetchMessages(uids.slice(i, i + FETCH_BATCH_SIZE).join(','), {});
+        const messages = await this.fetchBatch(folderPath, uids.slice(i, i + FETCH_BATCH_SIZE));
 
         // Append each message
         for (const msg of messages) {
@@ -249,27 +316,7 @@ export class AccountMigrator {
             // A dropped connection is handled per folder (reconnect + rerun), not per message
             if (isConnectionError(err)) throw err;
 
-            logger.warn(`Failed to migrate message UID ${msg.uid} in ${folderPath}`, {
-              accountId: account.id,
-              error: err.message,
-            });
-
-            folderQueries.incrementFailed(account.id, folderPath);
-            accountQueries.incrementFailed(account.id);
-
-            errorQueries.create(account.id, {
-              folderPath,
-              messageUid: msg.uid,
-              errorType: 'message',
-              errorMessage: err.message,
-              retryable: true,
-            });
-
-            eventBus.emitError(jobId, account.id, {
-              folderPath,
-              messageUid: msg.uid,
-              error: err.message,
-            });
+            this.recordFailedMessage(folderPath, msg.uid, err.message);
           }
         }
       }
@@ -282,11 +329,13 @@ export class AccountMigrator {
 
       // The server dropped a connection: reconnect and run the folder again (already copied
       // messages are skipped because last_uid is stored after every message)
-      if (isConnectionError(err) && attempt < MAX_FOLDER_RETRIES && !this.cancelled) {
-        logger.warn(`Connection lost in ${folderPath}, retrying folder (attempt ${attempt + 1}/${MAX_FOLDER_RETRIES})`, {
+      if (isConnectionError(err) && attempt < config.folderRetries && !this.cancelled) {
+        logger.warn(`Connection lost in ${folderPath}, retrying folder (attempt ${attempt + 1}/${config.folderRetries})`, {
           accountId: account.id,
           error: reason,
         });
+        // Back off a little more each time; a server that throttles needs a pause, not a hammer
+        await new Promise((resolve) => setTimeout(resolve, FOLDER_RETRY_DELAY_MS * (attempt + 1)));
         await this.ensureConnected();
         return this.migrateFolder(folderPath, attempt + 1);
       }
