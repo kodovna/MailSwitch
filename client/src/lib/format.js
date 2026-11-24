@@ -1,12 +1,3 @@
-// Offset between the server clock and this browser's clock, so durations stay correct
-// even when the two differ (set from the HTTP Date header of every API response)
-let serverOffsetMs = 0;
-
-export function syncServerTime(dateHeader) {
-  const serverNow = Date.parse(dateHeader);
-  if (!Number.isNaN(serverNow)) serverOffsetMs = serverNow - Date.now();
-}
-
 function parseDate(str) {
   if (!str) return null;
   // JS ISO strings already have 'T' and 'Z', SQLite datetime('now') gives '2024-01-01 00:00:00'
@@ -23,7 +14,7 @@ export function formatDate(dateStr) {
 export function formatDuration(start, end) {
   const s = parseDate(start);
   if (!s) return '-';
-  const e = end ? parseDate(end) : new Date(Date.now() + serverOffsetMs);
+  const e = end ? parseDate(end) : new Date();
   const diff = Math.max(0, Math.floor((e - s) / 1000));
   if (diff < 60) return `${diff}s`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;

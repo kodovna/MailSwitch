@@ -18,6 +18,10 @@ export function initDatabase() {
   const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
   db.exec(schema);
 
+  // Rows that were restarted before finished_at was cleared still carry the previous run's end time
+  db.exec("UPDATE accounts SET finished_at = NULL WHERE status IN ('pending', 'running', 'paused') AND finished_at IS NOT NULL");
+  db.exec("UPDATE migration_jobs SET finished_at = NULL WHERE status IN ('pending', 'running', 'paused') AND finished_at IS NOT NULL");
+
   // Databases created before job names existed
   const jobColumns = db.prepare('PRAGMA table_info(migration_jobs)').all().map((c) => c.name);
   if (!jobColumns.includes('name')) {
@@ -52,14 +56,14 @@ export const jobQueries = {
 
   updateStatus(id, status) {
     const extras = {};
-    if (status === 'running') extras.started_at = new Date().toISOString();
+    if (status === 'running') { extras.started_at = new Date().toISOString(); extras.finished_at = null; }
     if (['completed', 'cancelled', 'failed'].includes(status)) extras.finished_at = new Date().toISOString();
 
     const sets = ['status = ?', "updated_at = datetime('now')"];
     const params = [status];
 
     if (extras.started_at) { sets.push('started_at = ?'); params.push(extras.started_at); }
-    if (extras.finished_at) { sets.push('finished_at = ?'); params.push(extras.finished_at); }
+    if (extras.finished_at !== undefined) { sets.push('finished_at = ?'); params.push(extras.finished_at); }
 
     params.push(id);
     getDb().prepare(`UPDATE migration_jobs SET ${sets.join(', ')} WHERE id = ?`).run(...params);
@@ -136,7 +140,7 @@ export const accountQueries = {
 
   updateStatus(id, status, errorMessage = null) {
     const extras = {};
-    if (status === 'running') extras.started_at = new Date().toISOString();
+    if (status === 'running') { extras.started_at = new Date().toISOString(); extras.finished_at = null; }
     if (['completed', 'failed', 'cancelled', 'skipped'].includes(status)) extras.finished_at = new Date().toISOString();
 
     const sets = ['status = ?', "updated_at = datetime('now')"];
@@ -144,7 +148,7 @@ export const accountQueries = {
 
     if (errorMessage !== null) { sets.push('error_message = ?'); params.push(errorMessage); }
     if (extras.started_at) { sets.push('started_at = ?'); params.push(extras.started_at); }
-    if (extras.finished_at) { sets.push('finished_at = ?'); params.push(extras.finished_at); }
+    if (extras.finished_at !== undefined) { sets.push('finished_at = ?'); params.push(extras.finished_at); }
 
     params.push(id);
     getDb().prepare(`UPDATE accounts SET ${sets.join(', ')} WHERE id = ?`).run(...params);
