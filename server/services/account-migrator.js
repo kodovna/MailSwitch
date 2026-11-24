@@ -6,6 +6,7 @@ import { retry, retryMessage } from '../utils/retry.js';
 import { logger } from '../utils/logger.js';
 
 const MAX_FOLDER_RETRIES = 2;
+const FETCH_BATCH_SIZE = 25;
 
 function isConnectionError(err) {
   const text = `${err.code || ''} ${err.message || ''}`;
@@ -213,69 +214,63 @@ export class AccountMigrator {
         return;
       }
 
-      // Fetch messages from source
-      let messages;
-      try {
-        messages = await this.srcClient.fetchMessages(range, {});
-      } catch (err) {
-        // No messages in range (e.g., range is beyond existing UIDs)
-        if (err.message?.includes('does not exist') || err.message?.includes('Nothing to fetch')) {
-          folderQueries.updateStatus(account.id, folderPath, 'completed');
-          return;
-        }
-        throw err;
-      }
-
       // Open destination folder
       await this.dstClient.openFolder(folderPath);
 
-      // `N:*` always returns the last message even when its UID < N
-      messages = messages.filter((m) => m.uid > lastUid);
+      // UIDs still to copy (`N:*` always returns the last message even when its UID < N)
+      const uids = (await this.srcClient.searchUids(range)).filter((uid) => uid > lastUid);
 
-      // Append each message
-      for (const msg of messages) {
+      // Fetch in small batches: a single FETCH for the whole folder keeps every message in
+      // memory and overloads the source server on large folders
+      for (let i = 0; i < uids.length; i += FETCH_BATCH_SIZE) {
         if (this.cancelled) break;
-        await this.waitIfPaused();
+        const messages = await this.srcClient.fetchMessages(uids.slice(i, i + FETCH_BATCH_SIZE).join(','), {});
 
-        try {
-          await retryMessage(
-            () => this.dstClient.appendMessage(folderPath, msg.source, msg.flags, msg.internalDate),
-            { maxRetries: 2, label: `Message UID ${msg.uid} in ${folderPath}` }
-          );
+        // Append each message
+        for (const msg of messages) {
+          if (this.cancelled) break;
+          await this.waitIfPaused();
 
-          folderQueries.incrementMigrated(account.id, folderPath);
-          folderQueries.updateLastUid(account.id, folderPath, msg.uid);
-          accountQueries.incrementMigrated(account.id);
-          this.migratedCount++;
+          try {
+            await retryMessage(
+              () => this.dstClient.appendMessage(folderPath, msg.source, msg.flags, msg.internalDate),
+              { maxRetries: 2, label: `Message UID ${msg.uid} in ${folderPath}` }
+            );
 
-          eventBus.emitAccountUpdate(jobId, account.id, {
-            migratedMessages: this.migratedCount,
-          });
-        } catch (err) {
-          // A dropped connection is handled per folder (reconnect + rerun), not per message
-          if (isConnectionError(err)) throw err;
+            folderQueries.incrementMigrated(account.id, folderPath);
+            folderQueries.updateLastUid(account.id, folderPath, msg.uid);
+            accountQueries.incrementMigrated(account.id);
+            this.migratedCount++;
 
-          logger.warn(`Failed to migrate message UID ${msg.uid} in ${folderPath}`, {
-            accountId: account.id,
-            error: err.message,
-          });
+            eventBus.emitAccountUpdate(jobId, account.id, {
+              migratedMessages: this.migratedCount,
+            });
+          } catch (err) {
+            // A dropped connection is handled per folder (reconnect + rerun), not per message
+            if (isConnectionError(err)) throw err;
 
-          folderQueries.incrementFailed(account.id, folderPath);
-          accountQueries.incrementFailed(account.id);
+            logger.warn(`Failed to migrate message UID ${msg.uid} in ${folderPath}`, {
+              accountId: account.id,
+              error: err.message,
+            });
 
-          errorQueries.create(account.id, {
-            folderPath,
-            messageUid: msg.uid,
-            errorType: 'message',
-            errorMessage: err.message,
-            retryable: true,
-          });
+            folderQueries.incrementFailed(account.id, folderPath);
+            accountQueries.incrementFailed(account.id);
 
-          eventBus.emitError(jobId, account.id, {
-            folderPath,
-            messageUid: msg.uid,
-            error: err.message,
-          });
+            errorQueries.create(account.id, {
+              folderPath,
+              messageUid: msg.uid,
+              errorType: 'message',
+              errorMessage: err.message,
+              retryable: true,
+            });
+
+            eventBus.emitError(jobId, account.id, {
+              folderPath,
+              messageUid: msg.uid,
+              error: err.message,
+            });
+          }
         }
       }
 

@@ -176,6 +176,12 @@ export class ImapClient {
     };
   }
 
+  // UIDs in a UID range (e.g. '123:*'), ascending
+  async searchUids(range) {
+    const uids = await this.client.search({ uid: range }, { uid: true });
+    return (uids || []).map(Number).sort((a, b) => a - b);
+  }
+
   async fetchMessages(range, options = {}) {
     const messages = [];
     for await (const msg of this.client.fetch(range, {
