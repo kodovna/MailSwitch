@@ -147,8 +147,8 @@ Environment variables (set in `docker-compose.yml`):
 | `DB_PATH` | `/data/mailswitch.db` | SQLite database path |
 | `MAX_CONCURRENT` | `10` | Max parallel account migrations |
 | `SYNC_INTERVAL` | `300` | Continuous sync interval in seconds |
-| `MAX_RETRIES` | `3` | Connection retry attempts |
-| `MESSAGE_RETRIES` | `2` | Per-message retry attempts |
+| `MAX_RETRIES` | `3` | Retries when connecting to the source or destination server; the wait grows 2 s, 8 s, 32 s, ... up to 60 s. Wrong credentials are never retried |
+| `MESSAGE_RETRIES` | `2` | Retries when copying a single message to the destination (1 s apart) |
 | `FOLDER_RETRIES` | `2` | How many times a folder is rerun (with a growing pause) after the IMAP connection drops |
 | `TRUST_PROXY` | _(empty)_ | Number of reverse proxies in front of the app (e.g. `1`). Set it when the log shows `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`, so rate limiting sees real client IPs |
 | `LOG_LEVEL` | `info` | Log level (error, warn, info, debug) |

@@ -63,7 +63,7 @@ export class AccountMigrator {
         });
         return client.connect().then(() => client);
       },
-      { maxRetries: 3, label: `Connect to source ${account.src_email}` }
+      { maxRetries: config.maxRetries, label: `Connect to source ${account.src_email}` }
     );
   }
 
@@ -82,7 +82,7 @@ export class AccountMigrator {
         });
         return client.connect().then(() => client);
       },
-      { maxRetries: 3, label: `Connect to destination ${account.dst_email}` }
+      { maxRetries: config.maxRetries, label: `Connect to destination ${account.dst_email}` }
     );
   }
 
@@ -321,7 +321,7 @@ export class AccountMigrator {
           try {
             await retryMessage(
               () => this.dstClient.appendMessage(folderPath, msg.source, msg.flags, msg.internalDate),
-              { maxRetries: 2, label: `Message UID ${msg.uid} in ${folderPath}` }
+              { maxRetries: config.messageRetries, label: `Message UID ${msg.uid} in ${folderPath}` }
             );
 
             folderQueries.incrementMigrated(account.id, folderPath);

@@ -1,18 +1,23 @@
 import { logger } from './logger.js';
 
-export async function retry(fn, { maxRetries = 3, baseDelay = 2000, factor = 4, label = 'operation' } = {}) {
+// Authentication failures never get better by waiting, so they are not retried
+const isRetryable = (err) => !err.authenticationFailed;
+
+export async function retry(fn, { maxRetries = 3, baseDelay = 2000, factor = 4, maxDelay = 60000, label = 'operation' } = {}) {
   let lastError;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn(attempt);
     } catch (err) {
       lastError = err;
-      if (attempt < maxRetries) {
-        const delay = baseDelay * Math.pow(factor, attempt);
+      if (attempt < maxRetries && isRetryable(err)) {
+        const delay = Math.min(baseDelay * Math.pow(factor, attempt), maxDelay);
         logger.warn(`${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms`, {
           error: err.message,
         });
         await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        break;
       }
     }
   }

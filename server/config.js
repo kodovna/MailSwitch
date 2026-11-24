@@ -9,7 +9,9 @@ export const config = {
   uploadDir: process.env.UPLOAD_DIR || '/data/uploads',
   maxConcurrentAccounts: parseInt(process.env.MAX_CONCURRENT || '10', 10),
   syncInterval: parseInt(process.env.SYNC_INTERVAL || '60', 10),
+  // Retries when connecting to a server (wait 2 s, 8 s, 32 s, ... at most 60 s between tries)
   maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
+  // Retries when copying one message to the destination (1 s apart)
   messageRetries: parseInt(process.env.MESSAGE_RETRIES || '2', 10),
   folderRetries: parseInt(process.env.FOLDER_RETRIES || '2', 10),
   logLevel: process.env.LOG_LEVEL || 'info',
