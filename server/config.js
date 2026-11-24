@@ -11,6 +11,7 @@ export const config = {
   syncInterval: parseInt(process.env.SYNC_INTERVAL || '60', 10),
   maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
   messageRetries: parseInt(process.env.MESSAGE_RETRIES || '2', 10),
+  folderRetries: parseInt(process.env.FOLDER_RETRIES || '2', 10),
   logLevel: process.env.LOG_LEVEL || 'info',
 
   // Number of reverse proxies in front of the app (e.g. 1), so rate limiting sees the real client IP.
