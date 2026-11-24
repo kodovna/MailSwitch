@@ -106,6 +106,16 @@ export class ImapClient {
     this.client.on('error', (err) => {
       logger.debug(`IMAP error for ${this.label}: ${err.message}`);
     });
+
+    this.closing = false;
+    this.client.on('close', () => {
+      if (!this.closing) logger.warn(`IMAP connection closed unexpectedly: ${this.label}`);
+    });
+  }
+
+  // False once the server (or the network) has dropped the connection
+  get usable() {
+    return this.client.usable;
   }
 
   async connect() {
@@ -114,6 +124,7 @@ export class ImapClient {
   }
 
   async disconnect() {
+    this.closing = true;
     try {
       await this.client.logout();
     } catch {

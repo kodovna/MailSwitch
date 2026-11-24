@@ -5,6 +5,13 @@ import { eventBus } from './event-bus.js';
 import { retry, retryMessage } from '../utils/retry.js';
 import { logger } from '../utils/logger.js';
 
+const MAX_FOLDER_RETRIES = 2;
+
+function isConnectionError(err) {
+  const text = `${err.code || ''} ${err.message || ''}`;
+  return /Connection not available|NoConnection|ECONNRESET|EPIPE|ETIMEDOUT|Connection closed|socket/i.test(text);
+}
+
 export class AccountMigrator {
   constructor(account, job) {
     this.account = account;
@@ -15,6 +22,7 @@ export class AccountMigrator {
     this.srcClient = null;
     this.dstClient = null;
     this.migratedCount = account.migrated_messages || 0;
+    this.failedFolders = [];
   }
 
   cancel() {
@@ -35,6 +43,58 @@ export class AccountMigrator {
     }
   }
 
+  connectSource() {
+    const { account } = this;
+    const { src_host, src_port, src_security } = this.job;
+    return retry(
+      () => {
+        const client = new ImapClient({
+          host: src_host,
+          port: src_port,
+          security: src_security || 'ssl',
+          email: account.src_email,
+          password: account.src_password,
+          label: `src:${account.src_email}`,
+        });
+        return client.connect().then(() => client);
+      },
+      { maxRetries: 3, label: `Connect to source ${account.src_email}` }
+    );
+  }
+
+  connectDestination() {
+    const { account } = this;
+    const { dst_host, dst_port, dst_security } = this.job;
+    return retry(
+      () => {
+        const client = new ImapClient({
+          host: dst_host,
+          port: dst_port,
+          security: dst_security || 'ssl',
+          email: account.dst_email,
+          password: account.dst_password,
+          label: `dst:${account.dst_email}`,
+        });
+        return client.connect().then(() => client);
+      },
+      { maxRetries: 3, label: `Connect to destination ${account.dst_email}` }
+    );
+  }
+
+  // Reopen whichever connection the server dropped while the account was migrating
+  async ensureConnected() {
+    if (!this.srcClient.usable) {
+      logger.warn(`Reconnecting to source for ${this.account.src_email}`);
+      await this.srcClient.disconnect();
+      this.srcClient = await this.connectSource();
+    }
+    if (!this.dstClient.usable) {
+      logger.warn(`Reconnecting to destination for ${this.account.dst_email}`);
+      await this.dstClient.disconnect();
+      this.dstClient = await this.connectDestination();
+    }
+  }
+
   async migrate() {
     const { account, jobId } = this;
     logger.info(`Starting migration for ${account.src_email}`, { accountId: account.id });
@@ -44,37 +104,8 @@ export class AccountMigrator {
 
     try {
       // Connect to both servers with retry (host/port/security from job-level config)
-      const { src_host, src_port, src_security, dst_host, dst_port, dst_security } = this.job;
-
-      this.srcClient = await retry(
-        () => {
-          const client = new ImapClient({
-            host: src_host,
-            port: src_port,
-            security: src_security || 'ssl',
-            email: account.src_email,
-            password: account.src_password,
-            label: `src:${account.src_email}`,
-          });
-          return client.connect().then(() => client);
-        },
-        { maxRetries: 3, label: `Connect to source ${account.src_email}` }
-      );
-
-      this.dstClient = await retry(
-        () => {
-          const client = new ImapClient({
-            host: dst_host,
-            port: dst_port,
-            security: dst_security || 'ssl',
-            email: account.dst_email,
-            password: account.dst_password,
-            label: `dst:${account.dst_email}`,
-          });
-          return client.connect().then(() => client);
-        },
-        { maxRetries: 3, label: `Connect to destination ${account.dst_email}` }
-      );
+      this.srcClient = await this.connectSource();
+      this.dstClient = await this.connectDestination();
 
       // List source folders
       const srcFolders = await this.srcClient.listFolders();
@@ -103,6 +134,7 @@ export class AccountMigrator {
       for (const folder of srcFolders) {
         if (this.cancelled) break;
         await this.waitIfPaused();
+        await this.ensureConnected();
         await this.migrateFolder(folder.path);
       }
 
@@ -111,12 +143,19 @@ export class AccountMigrator {
         eventBus.emitAccountUpdate(jobId, account.id, { status: 'cancelled' });
       } else {
         const failedMessages = accountQueries.getFailedCount(account.id);
-        if (failedMessages > 0) {
+        if (this.failedFolders.length > 0) {
+          // Folders that could not be copied: leave the account failed so it shows up and can be retried
+          const message = `${this.failedFolders.length} folder(s) failed: ${this.failedFolders.join(', ')}`;
+          accountQueries.updateStatus(account.id, 'failed', message);
+          eventBus.emitAccountUpdate(jobId, account.id, { status: 'failed', error: message });
+        } else if (failedMessages > 0) {
           accountQueries.updateStatus(account.id, 'completed', `Completed with ${failedMessages} failed messages`);
         } else {
           accountQueries.updateStatus(account.id, 'completed');
         }
-        eventBus.emitAccountUpdate(jobId, account.id, { status: 'completed' });
+        if (this.failedFolders.length === 0) {
+          eventBus.emitAccountUpdate(jobId, account.id, { status: 'completed' });
+        }
       }
     } catch (err) {
       logger.error(`Migration failed for ${account.src_email}`, { error: err.message });
@@ -132,7 +171,7 @@ export class AccountMigrator {
     }
   }
 
-  async migrateFolder(folderPath) {
+  async migrateFolder(folderPath, attempt = 0) {
     const { account, jobId } = this;
 
     try {
@@ -213,6 +252,9 @@ export class AccountMigrator {
             migratedMessages: this.migratedCount,
           });
         } catch (err) {
+          // A dropped connection is handled per folder (reconnect + rerun), not per message
+          if (isConnectionError(err)) throw err;
+
           logger.warn(`Failed to migrate message UID ${msg.uid} in ${folderPath}`, {
             accountId: account.id,
             error: err.message,
@@ -242,6 +284,19 @@ export class AccountMigrator {
     } catch (err) {
       // imapflow reports only "Command failed"; the server's reason is in responseText
       const reason = err.responseText ? `${err.message}: ${err.responseText}` : err.message;
+
+      // The server dropped a connection: reconnect and run the folder again (already copied
+      // messages are skipped because last_uid is stored after every message)
+      if (isConnectionError(err) && attempt < MAX_FOLDER_RETRIES && !this.cancelled) {
+        logger.warn(`Connection lost in ${folderPath}, retrying folder (attempt ${attempt + 1}/${MAX_FOLDER_RETRIES})`, {
+          accountId: account.id,
+          error: reason,
+        });
+        await this.ensureConnected();
+        return this.migrateFolder(folderPath, attempt + 1);
+      }
+
+      this.failedFolders.push(folderPath);
       logger.error(`Failed to migrate folder ${folderPath}`, { accountId: account.id, error: reason });
       folderQueries.updateStatus(account.id, folderPath, 'failed');
       errorQueries.create(account.id, {
