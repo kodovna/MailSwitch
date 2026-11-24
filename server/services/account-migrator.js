@@ -176,6 +176,15 @@ export class AccountMigrator {
     }
   }
 
+  emitFolderCounters(folderPath) {
+    const row = folderQueries.get(this.account.id, folderPath);
+    if (!row) return;
+    eventBus.emitFolderUpdate(this.jobId, this.account.id, folderPath, {
+      migratedMessages: row.migrated_messages,
+      failedMessages: row.failed_messages,
+    });
+  }
+
   recordFailedMessage(folderPath, uid, message, { retryable = true } = {}) {
     const { account, jobId } = this;
 
@@ -186,6 +195,7 @@ export class AccountMigrator {
 
     folderQueries.incrementFailed(account.id, folderPath);
     accountQueries.incrementFailed(account.id);
+    this.emitFolderCounters(folderPath);
 
     errorQueries.create(account.id, {
       folderPath,
@@ -311,6 +321,7 @@ export class AccountMigrator {
             folderQueries.updateLastUid(account.id, folderPath, msg.uid);
             accountQueries.incrementMigrated(account.id);
             this.migratedCount++;
+            this.emitFolderCounters(folderPath);
 
             eventBus.emitAccountUpdate(jobId, account.id, {
               migratedMessages: this.migratedCount,

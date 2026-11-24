@@ -1,3 +1,5 @@
+import { syncServerTime } from './format';
+
 const BASE = '/api';
 
 async function request(path, options = {}) {
@@ -6,6 +8,7 @@ async function request(path, options = {}) {
     credentials: 'include',
     ...options,
   });
+  syncServerTime(res.headers.get('date'));
   if (res.status === 401) {
     window.location.reload();
     throw new Error('Session expired');

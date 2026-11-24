@@ -1,23 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSSE } from './useSSE';
 import { api } from '../lib/api';
-
-// SSE events use camelCase but DB records use snake_case
-function normalizeAccountData(data) {
-  const map = {
-    totalMessages: 'total_messages',
-    migratedMessages: 'migrated_messages',
-    failedMessages: 'failed_messages',
-    skippedMessages: 'skipped_messages',
-    currentFolder: 'current_folder',
-    errorMessage: 'error_message',
-  };
-  const result = {};
-  for (const [key, value] of Object.entries(data)) {
-    result[map[key] || key] = value;
-  }
-  return result;
-}
+import { normalizeAccountData } from '../lib/normalize';
 
 export function useMigrationState(jobId) {
   const [job, setJob] = useState(null);

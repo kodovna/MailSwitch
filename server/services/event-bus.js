@@ -5,6 +5,7 @@ class EventBus extends EventEmitter {
     super();
     // Buffered progress updates per account, flushed every 500ms
     this._progressBuffer = new Map();
+    this._folderBuffer = new Map();
     this._flushInterval = setInterval(() => this._flushProgress(), 500);
     this._flushInterval.unref();
   }
@@ -25,6 +26,12 @@ class EventBus extends EventEmitter {
   }
 
   emitFolderUpdate(jobId, accountId, folderPath, data) {
+    // Throttle pure counter updates like the account ones; status changes go through immediately
+    if ((data.migratedMessages !== undefined || data.failedMessages !== undefined) &&
+        !data.status && !data.totalMessages && !data.error) {
+      this._folderBuffer.set(`${jobId}:${accountId}:${folderPath}`, { jobId, accountId, folderPath, ...data });
+      return;
+    }
     this.emit('folder:update', { jobId, accountId, folderPath, ...data });
   }
 
@@ -33,11 +40,14 @@ class EventBus extends EventEmitter {
   }
 
   _flushProgress() {
-    if (this._progressBuffer.size === 0) return;
     for (const data of this._progressBuffer.values()) {
       this.emit('account:update', data);
     }
     this._progressBuffer.clear();
+    for (const data of this._folderBuffer.values()) {
+      this.emit('folder:update', data);
+    }
+    this._folderBuffer.clear();
   }
 
   shutdown() {
