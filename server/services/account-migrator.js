@@ -302,8 +302,15 @@ export class AccountMigrator {
       for (let i = 0; i < uids.length; i += FETCH_BATCH_SIZE) {
         if (this.cancelled) break;
         const messages = await this.fetchBatch(folderPath, uids.slice(i, i + FETCH_BATCH_SIZE));
+        const mem = process.memoryUsage();
         logger.info(`${folderPath}: copying messages ${i + 1}-${Math.min(i + FETCH_BATCH_SIZE, uids.length)} of ${uids.length}`, {
           accountId: account.id,
+          // heap growth points at a leak; growth in external/rss alone is buffers waiting for GC
+          memoryMB: {
+            rss: Math.round(mem.rss / 1048576),
+            heap: Math.round(mem.heapUsed / 1048576),
+            external: Math.round((mem.external + mem.arrayBuffers) / 1048576),
+          },
         });
 
         // Append each message
